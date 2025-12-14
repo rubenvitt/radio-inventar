@@ -1,0 +1,21 @@
+# BMM Workflow Status
+# Tracks completion status of BMAD workflows for this project
+
+project_name: radio-inventar
+last_updated: 2025-12-13
+
+# Completed Workflows
+workflows:
+  product-brief:
+    status: completed
+    completed_at: 2025-12-13
+    output_file: docs/analysis/product-brief-radio-inventar-2025-12-13.md
+
+# Suggested Next Steps
+next_steps:
+  - workflow: prd
+    description: Create detailed Product Requirements Document
+    priority: recommended
+  - workflow: create-ux-design
+    description: UX research and design
+    priority: optional
