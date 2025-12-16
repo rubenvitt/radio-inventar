@@ -1,0 +1,22 @@
+# docker-compose.yml (Development)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: radio-inventar-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-radio}
+      # WICHTIG: In Production POSTGRES_PASSWORD setzen!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_DB: radio_inventar
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radio} -d radio_inventar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

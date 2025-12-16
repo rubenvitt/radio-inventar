@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    // Using "bundler" for Vite-based monorepo where all packages are private and consumed only by bundled apps (frontend/backend).
+    // This is correct for our use case - all consumers will use Vite or another bundler. For published npm packages, use "node16" or "nodenext".
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+    // skipLibCheck: false provides strict type safety by checking all .d.ts files including node_modules.
+    // This is acceptable for small monorepos (<50MB node_modules) but can impact build performance in larger projects.
+    // Current node_modules size: ~28MB - keeping strict checking enabled for better type safety.
+    "skipLibCheck": false,
+    "forceConsistentCasingInFileNames": true,
+    // Declaration settings are inherited by workspace packages via project references.
+    // These are used by packages that set composite: true (e.g., packages/shared).
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  // Root config serves as base only - no files should be compiled directly
+  "include": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./apps/backend" },
+    { "path": "./apps/frontend" }
+  ]
+}

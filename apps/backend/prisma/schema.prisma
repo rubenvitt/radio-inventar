@@ -1,0 +1,46 @@
+// apps/backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DeviceStatus {
+  AVAILABLE
+  ON_LOAN
+  DEFECT
+  MAINTENANCE
+}
+
+model Device {
+  id           String       @id @default(cuid())
+  callSign     String       @unique @db.VarChar(50)
+  serialNumber String?      @db.VarChar(100)
+  deviceType   String       @db.VarChar(100)
+  status       DeviceStatus @default(AVAILABLE)
+  notes        String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  loans        Loan[]
+
+  @@index([status])
+}
+
+model Loan {
+  id           String    @id @default(cuid())
+  deviceId     String    @db.VarChar(25)
+  device       Device    @relation(fields: [deviceId], references: [id])
+  borrowerName String    @db.VarChar(100)
+  borrowedAt   DateTime  @default(now())
+  returnedAt   DateTime?
+  returnNote   String?   @db.VarChar(500)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([deviceId])
+  @@index([borrowerName])
+}

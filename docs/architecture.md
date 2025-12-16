@@ -82,7 +82,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 |-------|---------|----------|
 | TanStack Query | v5.90.x | Server-State Management |
 | TanStack Store | v0.8.x | Client-State Management |
-| Prisma ORM | v7.x | Rust-free, Performance-Verbesserungen |
+| Prisma ORM | v6.x | Aktuelle stabile Version |
 | Tailwind CSS | v4.x | Via @tailwindcss/vite Plugin |
 | shadcn/ui | latest | Vite-Support offiziell |
 | NestJS | v11.x | Backend Framework |
@@ -134,7 +134,7 @@ radio-inventar/
 | Frontend Build | Vite 6.x |
 | Frontend Framework | React 19.x |
 | Backend Framework | NestJS 11.x |
-| ORM | Prisma 7.x |
+| ORM | Prisma 6.x |
 | Datenbank | PostgreSQL |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Client State | TanStack Store v0.8 |
@@ -205,7 +205,7 @@ cd ../.. && mkdir -p packages/shared/src
 **Prisma + PostgreSQL:**
 - Migrations via `prisma migrate dev`
 - Type-safe Client generiert aus Schema
-- Prisma v7: Rust-free, verbesserte Performance
+- Prisma v6: Aktuelle stabile Version
 
 ### Authentication & Security
 
@@ -975,7 +975,7 @@ Alle Technologie-Entscheidungen arbeiten konfliktfrei zusammen:
 | Components | shadcn/ui | latest |
 | Validation | Zod | 4.1.x |
 | Backend | NestJS | 11.x |
-| ORM | Prisma | 7.x |
+| ORM | Prisma | 6.x |
 | Database | PostgreSQL | 16 |
 
 ### Quality Assurance

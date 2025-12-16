@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "composite": true,
+    "incremental": true,
+    // TypeScript writes .tsbuildinfo to ./dist/.tsbuildinfo as configured
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*"],
+  // Exclude examples, tests, and build artifacts. Test exclusions are proactive for future test implementation.
+  "exclude": ["node_modules", "dist", "src/examples", "**/*.test.ts", "**/*.spec.ts"]
+}

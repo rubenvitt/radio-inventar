@@ -22,7 +22,7 @@ _Kritische Regeln für radio-inventar. Lies dies VOR jeder Implementierung._
 | Client State | @tanstack/react-store | ^0.8.0 | Nur für Theme |
 | Styling | tailwindcss | ^4.0.0 | V4 Syntax! |
 | Components | shadcn/ui | latest | Via CLI hinzufügen |
-| Validation | zod | ^4.1.0 | V4 hat neue API! |
+| Validation | zod | ^3.24.0 | - |
 | Backend | @nestjs/core | ^11.0.0 | - |
 | ORM | prisma | ^7.0.0 | Rust-free Version |
 | DB | postgresql | 16 | Via Docker |
@@ -39,10 +39,10 @@ import { DeviceSchema, type Device } from '@radio-inventar/shared'
 // NIEMALS Zod Schemas im Frontend/Backend separat definieren
 ```
 
-### Zod v4 Syntax
+### Zod v3 Syntax
 
 ```typescript
-// Zod v4 Syntax
+// Zod v3 Syntax
 import { z } from 'zod'
 const schema = z.object({ name: z.string() })
 type MyType = z.infer<typeof schema>

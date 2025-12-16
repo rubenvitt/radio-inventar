@@ -1,0 +1,25 @@
+# Development files
+src/
+# Note: src/examples/ is already covered by src/ above
+dist/examples/
+
+# TypeScript config
+tsconfig.json
+tsconfig.*.json
+
+# Build info (.tsbuildinfo is already in dist/ which is included via allowlist in package.json files field)
+dist/.tsbuildinfo
+
+# Tests
+**/*.test.ts
+**/*.spec.ts
+
+# Development tools
+.eslintrc.*
+.prettierrc.*
+
+# Source maps: INCLUDED for better debugging experience.
+# This package is private and only used within the monorepo, so package size is not a concern.
+# Source maps enable workspace consumers (frontend/backend) to debug into shared package code.
+# **/*.js.map
+# **/*.d.ts.map

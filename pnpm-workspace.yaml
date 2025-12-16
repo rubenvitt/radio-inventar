@@ -1,0 +1,12 @@
+# pnpm Workspace Configuration for Radio-Inventar Monorepo
+#
+# apps/*: Application packages (frontend, backend) - these consume shared packages
+# packages/*: Library packages (shared types/schemas) - these are consumed by apps
+#
+# This separation enables:
+# - Independent versioning of apps vs libraries
+# - Clear dependency direction (apps depend on packages, not vice versa)
+# - Build optimization via pnpm's workspace linking
+packages:
+  - 'apps/*'
+  - 'packages/*'

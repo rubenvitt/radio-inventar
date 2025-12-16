@@ -1,0 +1,31 @@
+{
+  "name": "radio-inventar",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "comment": ".nvmrc specifies Node 20 LTS for local development; engines allows >=20.0.0 for flexibility",
+  "scripts": {
+    "dev": "pnpm --filter @radio-inventar/backend --filter @radio-inventar/frontend -r --parallel dev",
+    "dev:backend": "pnpm --filter @radio-inventar/backend dev",
+    "dev:frontend": "pnpm --filter @radio-inventar/frontend dev",
+    "build": "pnpm run build:shared && pnpm run --parallel build:backend build:frontend",
+    "build:shared": "pnpm --filter @radio-inventar/shared build",
+    "build:backend": "pnpm --filter @radio-inventar/backend build",
+    "build:frontend": "pnpm --filter @radio-inventar/frontend build",
+    "typecheck": "pnpm -r typecheck",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:migrate": "pnpm --filter @radio-inventar/backend exec prisma migrate dev",
+    "db:studio": "pnpm --filter @radio-inventar/backend prisma studio",
+    "lint": "echo 'Lint not configured yet'",
+    "test": "echo 'Tests not configured yet'",
+    "_comment_clean": "Removes all build artifacts and dependencies. Use 'pnpm install' to reinstall after cleaning.",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

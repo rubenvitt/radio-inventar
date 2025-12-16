@@ -40,10 +40,10 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: Projekt-Foundation & Infrastruktur
-  epic-1: backlog
-  1-1-monorepo-initialisierung-shared-package: backlog
-  1-2-backend-grundstruktur-prisma-postgresql: backlog
-  1-3-frontend-grundstruktur-tanstack-router-theme: backlog
+  epic-1: in-progress
+  1-1-monorepo-initialisierung-shared-package: done
+  1-2-backend-grundstruktur-prisma-postgresql: done
+  1-3-frontend-grundstruktur-tanstack-router-theme: review
   1-4-touch-optimiertes-basis-layout-shadcn-ui-setup: backlog
   epic-1-retrospective: optional
 
