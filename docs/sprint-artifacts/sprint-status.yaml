@@ -80,7 +80,7 @@ development_status:
   # Epic 6: Admin-Dashboard, Historie & Reporting
   epic-6: in-progress
   6-1-backend-api-dashboard-historie: done
-  6-2-admin-dashboard-ui: in-progress
+  6-2-admin-dashboard-ui: done
   6-3-admin-historie-ui-filter: backlog
   6-4-csv-export-historie: backlog
   6-5-druckbare-geraete-liste-qr-code: backlog
