@@ -43,44 +43,45 @@ development_status:
   epic-1: in-progress
   1-1-monorepo-initialisierung-shared-package: done
   1-2-backend-grundstruktur-prisma-postgresql: done
-  1-3-frontend-grundstruktur-tanstack-router-theme: review
-  1-4-touch-optimiertes-basis-layout-shadcn-ui-setup: backlog
-  epic-1-retrospective: optional
+  1-3-frontend-grundstruktur-tanstack-router-theme: done
+  1-4-touch-optimiertes-basis-layout-shadcn-ui-setup: done
+  epic-1-retrospective: done
 
   # Epic 2: Geräte-Übersicht & Live-Status
-  epic-2: backlog
-  2-1-backend-api-geraete-ausleihen: backlog
-  2-2-geraete-uebersicht-live-status: backlog
-  2-3-manuelles-refresh-uebersicht: backlog
-  epic-2-retrospective: optional
+  epic-2: done
+  2-1-backend-api-geraete-ausleihen: done
+  2-2-geraete-uebersicht-live-status: done
+  2-3-manuelles-refresh-uebersicht: done
+  epic-2-retrospective: done
 
   # Epic 3: Geräteausleihe
-  epic-3: backlog
-  3-1-backend-api-ausleihe-borrower-suggestions: backlog
-  3-2-geraeteauswahl-ausleihe: backlog
-  3-3-namenseingabe-autocomplete: backlog
-  3-4-ausleihe-bestaetigen-optimistic-ui: backlog
-  epic-3-retrospective: optional
+  epic-3: done
+  3-1-backend-api-ausleihe-borrower-suggestions: done
+  3-2-geraeteauswahl-ausleihe: done
+  3-3-namenseingabe-autocomplete: done
+  3-4-ausleihe-bestaetigen-optimistic-ui: done
+  epic-3-retrospective: done
 
   # Epic 4: Geräterückgabe
-  epic-4: backlog
-  4-1-backend-api-rueckgabe: backlog
-  4-2-eigene-ausgeliehene-geraete-anzeigen: backlog
-  4-3-geraet-zurueckgeben-optionale-notiz: backlog
-  epic-4-retrospective: optional
+  epic-4: done
+  4-1-backend-api-rueckgabe: done
+  4-2-eigene-ausgeliehene-geraete-anzeigen: done
+  4-3-geraet-zurueckgeben-optionale-notiz: done
+  epic-4-retrospective: done
 
   # Epic 5: Admin-Authentifizierung & Geräteverwaltung
-  epic-5: backlog
-  5-1-backend-admin-authentifizierung: backlog
-  5-2-admin-login-ui: backlog
-  5-3-backend-crud-geraete-admin: backlog
-  5-4-admin-geraeteverwaltung-ui: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-backend-admin-authentifizierung: done
+  5-2-admin-login-ui: done
+  5-3-backend-crud-geraete-admin: done
+  5-4-admin-geraeteverwaltung-ui: done
+  epic-5-retrospective: done
 
   # Epic 6: Admin-Dashboard, Historie & Reporting
-  epic-6: backlog
-  6-1-backend-api-dashboard-historie: backlog
-  6-2-admin-dashboard-ui: backlog
+  epic-6: in-progress
+  6-1-backend-api-dashboard-historie: done
+  6-2-admin-dashboard-ui: in-progress
   6-3-admin-historie-ui-filter: backlog
   6-4-csv-export-historie: backlog
+  6-5-druckbare-geraete-liste-qr-code: backlog
   epic-6-retrospective: optional
