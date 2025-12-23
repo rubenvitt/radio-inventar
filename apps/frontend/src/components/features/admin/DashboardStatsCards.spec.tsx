@@ -57,8 +57,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const verfügbarBadge = cards[0] // First card is Verfügbar
 
-      expect(verfügbarBadge).toHaveClass('bg-green-500')
-      expect(verfügbarBadge).toHaveClass('dark:bg-green-600')
+      expect(verfügbarBadge).toHaveClass('bg-[#22c55e]')
+      expect(verfügbarBadge).toHaveClass('dark:bg-[#16a34a]')
     })
 
     it('Ausgeliehen card has orange accent', () => {
@@ -67,8 +67,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const ausgeliehenBadge = cards[1] // Second card is Ausgeliehen
 
-      expect(ausgeliehenBadge).toHaveClass('bg-orange-500')
-      expect(ausgeliehenBadge).toHaveClass('dark:bg-orange-600')
+      expect(ausgeliehenBadge).toHaveClass('bg-[#f59e0b]')
+      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#d97706]')
     })
 
     it('Defekt card has red accent', () => {
@@ -77,8 +77,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const defektBadge = cards[2] // Third card is Defekt
 
-      expect(defektBadge).toHaveClass('bg-red-500')
-      expect(defektBadge).toHaveClass('dark:bg-red-600')
+      expect(defektBadge).toHaveClass('bg-[#ef4444]')
+      expect(defektBadge).toHaveClass('dark:bg-[#dc2626]')
     })
 
     it('Wartung card has gray accent', () => {
@@ -100,8 +100,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const verfügbarBadge = cards[0]
 
-      // dark:bg-green-600 corresponds to #16a34a in Tailwind's default palette
-      expect(verfügbarBadge).toHaveClass('dark:bg-green-600')
+      // Exact HEX value per UX spec AC1, AC7
+      expect(verfügbarBadge).toHaveClass('dark:bg-[#16a34a]')
     })
 
     it('Orange uses #d97706 in dark mode', () => {
@@ -110,8 +110,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const ausgeliehenBadge = cards[1]
 
-      // dark:bg-orange-600 corresponds to #d97706 in Tailwind's default palette
-      expect(ausgeliehenBadge).toHaveClass('dark:bg-orange-600')
+      // Exact HEX value per UX spec AC1, AC7
+      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#d97706]')
     })
 
     it('Red uses #dc2626 in dark mode', () => {
@@ -120,8 +120,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const defektBadge = cards[2]
 
-      // dark:bg-red-600 corresponds to #dc2626 in Tailwind's default palette
-      expect(defektBadge).toHaveClass('dark:bg-red-600')
+      // Exact HEX value per UX spec AC1, AC7
+      expect(defektBadge).toHaveClass('dark:bg-[#dc2626]')
     })
 
     it('Background uses dark theme variables', () => {

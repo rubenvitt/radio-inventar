@@ -29,6 +29,13 @@ vi.mock('date-fns/locale', () => ({
   de: {},
 }));
 
+// Mock TanStack Router
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to, ...props }: any) => (
+    <a data-testid="router-link" href={to} {...props}>{children}</a>
+  ),
+}));
+
 // Mock shadcn/ui components
 vi.mock('@/components/ui/card', () => ({
   Card: ({ children, ...props }: any) => <div data-testid="card" {...props}>{children}</div>,
@@ -37,6 +44,16 @@ vi.mock('@/components/ui/card', () => ({
   CardContent: ({ children, className, ...props }: any) => (
     <div data-testid="card-content" className={className} {...props}>{children}</div>
   ),
+}));
+
+vi.mock('@/components/ui/button', () => ({
+  Button: ({ children, asChild, ...props }: any) => {
+    if (asChild) {
+      // When asChild is true, render children directly
+      return children;
+    }
+    return <button data-testid="button" {...props}>{children}</button>;
+  },
 }));
 
 // Mock sanitizeForDisplay utility
@@ -158,7 +175,7 @@ describe('ActiveLoansList', () => {
 
       render(<ActiveLoansList loans={loans} />);
 
-      expect(screen.getByText('...und 25 weitere')).toBeInTheDocument();
+      expect(screen.getByText('...und 25 weitere ansehen')).toBeInTheDocument();
     });
 
     it('link points to /admin/history', () => {
@@ -171,7 +188,7 @@ describe('ActiveLoansList', () => {
 
       render(<ActiveLoansList loans={loans} />);
 
-      const moreText = screen.getByText('...und 25 weitere');
+      const moreText = screen.getByText('...und 25 weitere ansehen');
       // Note: Component shows text, actual link would be handled by parent component
       // This test verifies the text is displayed correctly
       expect(moreText).toBeInTheDocument();
@@ -521,7 +538,7 @@ describe('ActiveLoansList', () => {
 
       const loanItems = screen.getAllByTestId('active-loan-item');
       expect(loanItems).toHaveLength(10);
-      expect(screen.getByText('...und 20 weitere')).toBeInTheDocument();
+      expect(screen.getByText('...und 20 weitere ansehen')).toBeInTheDocument();
     });
 
     it('handles exactly maxDisplay loans without showing "weitere"', () => {

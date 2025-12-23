@@ -6,6 +6,11 @@ import { DashboardStatsSchema, type DashboardStats } from '@radio-inventar/share
 import { apiClient, ApiError } from './client';
 import { adminDashboardKeys } from '@/lib/queryKeys';
 
+// === Constants ===
+
+/** Dashboard data cache time in milliseconds (30 seconds per AC5) */
+const DASHBOARD_CACHE_TIME_MS = 30_000;
+
 // === Error Messages (German) ===
 
 const DASHBOARD_API_ERRORS: Record<number, string> = {
@@ -69,8 +74,10 @@ export async function fetchAdminDashboard(): Promise<DashboardStats> {
     const validated = DashboardStatsSchema.parse(response);
     return validated;
   } catch (error) {
-    // Log Zod validation errors to console for debugging
-    console.error('Dashboard validation error:', error);
+    // Log Zod validation errors to console for debugging (dev only)
+    if (import.meta.env.DEV) {
+      console.error('Dashboard validation error:', error);
+    }
     throw new Error('Ungültige Serverantwort. Bitte Admin kontaktieren.');
   }
 }
@@ -97,7 +104,7 @@ export function useAdminDashboard() {
   return useQuery({
     queryKey: adminDashboardKeys.stats(),
     queryFn: fetchAdminDashboard,
-    staleTime: 30_000, // 30 seconds
+    staleTime: DASHBOARD_CACHE_TIME_MS,
     retry: 1, // Retry once on failure
     throwOnError: (error) => {
       // Auto-redirect to /admin/login on 401 (unauthorized)

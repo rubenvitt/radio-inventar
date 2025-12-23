@@ -1,3 +1,4 @@
+// Story 6.2: Admin Dashboard UI - Dashboard Statistics Cards Component
 import { Check, AlertCircle, XCircle, Wrench } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -20,11 +21,12 @@ interface StatCardProps {
   icon: React.ReactNode
 }
 
-// Color configurations from UX spec (exact Tailwind classes from story lines 273-277)
+// Color configurations from UX spec - EXACT HEX values (AC1, AC7)
+// Using arbitrary Tailwind values for precise color matching
 const colorConfig = {
-  green: 'bg-green-500 dark:bg-green-600',
-  orange: 'bg-orange-500 dark:bg-orange-600',
-  red: 'bg-red-500 dark:bg-red-600',
+  green: 'bg-[#22c55e] dark:bg-[#16a34a]',
+  orange: 'bg-[#f59e0b] dark:bg-[#d97706]',
+  red: 'bg-[#ef4444] dark:bg-[#dc2626]',
   gray: 'bg-gray-500 dark:bg-gray-600',
 } as const
 

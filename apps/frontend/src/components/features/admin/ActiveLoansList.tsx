@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { Link } from '@tanstack/react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { sanitizeForDisplay } from '@/lib/sanitize';
 import type { DashboardStats } from '@radio-inventar/shared';
 
@@ -24,12 +26,7 @@ interface LoanItemProps {
  * Displays a single active loan with device info, borrower, and relative time
  * Touch-optimized with min-height 64px per AC6
  */
-function LoanItem({ loan }: LoanItemProps) {
-  const formattedTime = formatDistanceToNow(new Date(loan.borrowedAt), {
-    addSuffix: true,
-    locale: de,
-  });
-
+function LoanItem({ loan, formattedTime }: LoanItemProps & { formattedTime: string }) {
   return (
     <div
       className="grid grid-cols-[1fr_auto] gap-4 p-4 rounded-lg border border-orange-500/20 bg-orange-500/5 min-h-[64px] items-center"
@@ -75,10 +72,10 @@ function LoanItem({ loan }: LoanItemProps) {
  * @param maxDisplay - Maximum number of loans to display (default: 50)
  */
 export function ActiveLoansList({ loans, maxDisplay = 50 }: ActiveLoansListProps) {
-  // CRITICAL: XSS Protection with useMemo
-  // Sanitize all user-generated content before rendering
-  // Memoized to avoid re-sanitizing on every render (performance)
-  const sanitizedLoans = useMemo(
+  // CRITICAL: XSS Protection + Date Parsing with useMemo
+  // Sanitize all user-generated content AND parse dates before rendering
+  // Memoized to avoid re-sanitizing and re-parsing on every render (performance)
+  const sanitizedLoansWithTime = useMemo(
     () => loans.map(loan => ({
       ...loan,
       device: {
@@ -86,12 +83,16 @@ export function ActiveLoansList({ loans, maxDisplay = 50 }: ActiveLoansListProps
         deviceType: sanitizeForDisplay(loan.device.deviceType),
       },
       borrowerName: sanitizeForDisplay(loan.borrowerName),
+      formattedTime: formatDistanceToNow(new Date(loan.borrowedAt), {
+        addSuffix: true,
+        locale: de,
+      }),
     })),
     [loans]
   );
 
   // Empty state (AC2)
-  if (sanitizedLoans.length === 0) {
+  if (sanitizedLoansWithTime.length === 0) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
@@ -102,22 +103,26 @@ export function ActiveLoansList({ loans, maxDisplay = 50 }: ActiveLoansListProps
   }
 
   // Loans list with max display limit
-  const displayedLoans = sanitizedLoans.slice(0, maxDisplay);
-  const remainingCount = sanitizedLoans.length - maxDisplay;
+  const displayedLoans = sanitizedLoansWithTime.slice(0, maxDisplay);
+  const remainingCount = sanitizedLoansWithTime.length - maxDisplay;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Aktuell ausgeliehen ({sanitizedLoans.length})</CardTitle>
+        <CardTitle>Aktuell ausgeliehen ({sanitizedLoansWithTime.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {displayedLoans.map(loan => (
-            <LoanItem key={loan.id} loan={loan} />
+            <LoanItem key={loan.id} loan={loan} formattedTime={loan.formattedTime} />
           ))}
           {remainingCount > 0 && (
-            <div className="text-center pt-4 text-muted-foreground">
-              ...und {remainingCount} weitere
+            <div className="text-center pt-4">
+              <Button variant="outline" asChild>
+                <Link to="/admin/history">
+                  ...und {remainingCount} {remainingCount === 1 ? 'weiteres Gerät' : 'weitere'} ansehen
+                </Link>
+              </Button>
             </div>
           )}
         </div>

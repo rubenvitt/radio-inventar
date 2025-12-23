@@ -12,6 +12,12 @@ import type { DashboardStats } from '@radio-inventar/shared';
 // Mock modules
 vi.mock('@/api/admin-dashboard', () => ({
   useAdminDashboard: vi.fn(),
+  getDashboardErrorMessage: vi.fn((error: any) => {
+    if (error instanceof ApiError && error.status === 401) {
+      return 'Authentifizierung erforderlich';
+    }
+    return 'Dashboard konnte nicht geladen werden';
+  }),
 }));
 
 vi.mock('@/components/features/admin/DashboardStatsCards', () => ({
@@ -37,7 +43,7 @@ vi.mock('@/components/features/admin/ActiveLoansList', () => ({
 vi.mock('@/components/features/ErrorState', () => ({
   ErrorState: ({ error, onRetry }: any) =>
     createElement('div', { 'data-testid': 'error-state', role: 'alert' }, [
-      createElement('p', { key: 'text' }, 'Fehler beim Laden'),
+      createElement('p', { key: 'text', role: 'alert' }, 'Dashboard konnte nicht geladen werden'),
       createElement(
         'button',
         { key: 'retry', onClick: onRetry, 'aria-label': 'Erneut versuchen' },
@@ -184,8 +190,8 @@ describe('Admin Dashboard Route', () => {
 
       render(createElement(Component!), { wrapper: createWrapper() });
 
-      expect(screen.getByTestId('error-state')).toBeInTheDocument();
-      expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Dashboard konnte nicht geladen werden');
+      expect(screen.getByRole('alert')).toHaveTextContent('Dashboard konnte nicht geladen werden');
     });
 
     it('ErrorState has retry button', async () => {
@@ -392,7 +398,7 @@ describe('Admin Dashboard Route', () => {
       render(createElement(Component!), { wrapper: createWrapper() });
 
       // 401 errors show error state before redirect
-      expect(screen.getByTestId('error-state')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Dashboard konnte nicht geladen werden');
     });
   });
 
@@ -457,8 +463,8 @@ describe('Admin Dashboard Route', () => {
 
       render(createElement(Component!), { wrapper: createWrapper() });
 
-      const errorState = screen.getByTestId('error-state');
-      expect(errorState).toHaveAttribute('role', 'alert');
+      const errorAlert = screen.getByRole('alert');
+      expect(errorAlert).toHaveTextContent('Dashboard konnte nicht geladen werden');
     });
 
     it('loading states have aria-busy="true"', async () => {
@@ -569,7 +575,7 @@ describe('Admin Dashboard Route', () => {
       const { rerender } = render(createElement(Component!), { wrapper: createWrapper() });
 
       // Verify error state
-      expect(screen.getByTestId('error-state')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Dashboard konnte nicht geladen werden');
 
       // Click retry
       const retryButton = screen.getByRole('button', { name: /erneut versuchen/i });
