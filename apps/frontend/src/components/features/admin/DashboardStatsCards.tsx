@@ -23,10 +23,11 @@ interface StatCardProps {
 
 // Color configurations from UX spec - EXACT HEX values (AC1, AC7)
 // Using arbitrary Tailwind values for precise color matching
+// Format: bg-[light] dark:bg-[dark]
 const colorConfig = {
-  green: 'bg-[#22c55e] dark:bg-[#16a34a]',
-  orange: 'bg-[#f59e0b] dark:bg-[#d97706]',
-  red: 'bg-[#ef4444] dark:bg-[#dc2626]',
+  green: 'bg-[#16a34a] dark:bg-[#22c55e]',
+  orange: 'bg-[#d97706] dark:bg-[#f59e0b]',
+  red: 'bg-[#dc2626] dark:bg-[#ef4444]',
   gray: 'bg-gray-500 dark:bg-gray-600',
 } as const
 
@@ -34,7 +35,11 @@ function StatCard({ title, count, color, icon }: StatCardProps) {
   const badgeColorClass = colorConfig[color]
 
   return (
-    <Card className="min-h-[120px] p-6 rounded-lg hover:shadow-lg transition-shadow">
+    <Card
+      className="min-h-[120px] p-6 rounded-lg hover:shadow-lg transition-shadow"
+      role="region"
+      aria-label={`${title} statistic`}
+    >
       <CardHeader className="p-0 pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -42,7 +47,7 @@ function StatCard({ title, count, color, icon }: StatCardProps) {
           </CardTitle>
           <div
             className={cn(
-              'rounded-full p-2 text-white',
+              'rounded-full p-3 text-white',
               badgeColorClass
             )}
             aria-hidden="true"
@@ -52,7 +57,7 @@ function StatCard({ title, count, color, icon }: StatCardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="text-5xl font-bold" aria-label={`${count} ${title}`}>
+        <div className="text-5xl font-bold">
           {count}
         </div>
       </CardContent>
@@ -67,25 +72,25 @@ export function DashboardStatsCards({ stats }: DashboardStatsCardsProps) {
         title="Verfügbar"
         count={stats.availableCount}
         color="green"
-        icon={<Check className="h-5 w-5" />}
+        icon={<Check className="h-6 w-6" />}
       />
       <StatCard
         title="Ausgeliehen"
         count={stats.onLoanCount}
         color="orange"
-        icon={<AlertCircle className="h-5 w-5" />}
+        icon={<AlertCircle className="h-6 w-6" />}
       />
       <StatCard
         title="Defekt"
         count={stats.defectCount}
         color="red"
-        icon={<XCircle className="h-5 w-5" />}
+        icon={<XCircle className="h-6 w-6" />}
       />
       <StatCard
         title="Wartung"
         count={stats.maintenanceCount}
         color="gray"
-        icon={<Wrench className="h-5 w-5" />}
+        icon={<Wrench className="h-6 w-6" />}
       />
     </div>
   )

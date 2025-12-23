@@ -22,12 +22,6 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0.625rem;
-
-  /* Status Colors */
-  --status-available: oklch(0.723 0.219 142.136);
-  --status-on-loan: oklch(0.769 0.188 70.08);
-  --status-defect: oklch(0.577 0.245 27.325);
-  --status-maintenance: oklch(0.556 0 0);
 }
 
 .dark {
@@ -42,19 +36,13 @@
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.85 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
-
-  /* Status Colors (Dark) */
-  --status-available: oklch(0.627 0.194 142.495);
-  --status-on-loan: oklch(0.769 0.188 70.08);
-  --status-defect: oklch(0.704 0.191 22.216);
-  --status-maintenance: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -80,20 +68,34 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-
-  /* Status Colors */
-  --color-status-available: var(--status-available);
-  --color-status-on-loan: var(--status-on-loan);
-  --color-status-defect: var(--status-defect);
-  --color-status-maintenance: var(--status-maintenance);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+@layer utilities {
+  .touch-target-sm {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .touch-target-md {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .touch-target-lg {
+    min-height: 64px;
+    min-width: 64px;
+  }
+  .touch-target-xl {
+    min-height: 72px;
+    min-width: 72px;
   }
 }

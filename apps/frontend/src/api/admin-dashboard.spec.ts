@@ -9,8 +9,8 @@ import {
   fetchAdminDashboard,
   getDashboardErrorMessage,
   useAdminDashboard,
-  type DashboardStats,
 } from './admin-dashboard';
+import type { DashboardStats } from '@radio-inventar/shared';
 import { apiClient, ApiError } from './client';
 import { adminDashboardKeys } from '@/lib/queryKeys';
 
@@ -49,60 +49,35 @@ const createWrapper = () => {
     createElement(QueryClientProvider, { client: queryClient }, children);
 };
 
-// Mock dashboard data (for use in tests after Zod parsing)
-const mockDashboardStats: DashboardStats = {
-  availableCount: 10,
-  onLoanCount: 5,
-  defectCount: 2,
-  maintenanceCount: 3,
-  activeLoans: [
-    {
-      id: 'clxxx1234567890',
-      device: {
-        callSign: 'Florian 1',
-        deviceType: 'Funkgerät',
-      },
-      borrowerName: 'Max Mustermann',
-      borrowedAt: '2025-01-15T10:30:00.000Z',
-    },
-    {
-      id: 'clxxx9876543210',
-      device: {
-        callSign: 'Florian 2',
-        deviceType: 'Handfunkgerät',
-      },
-      borrowerName: 'Anna Schmidt',
-      borrowedAt: '2025-01-16T14:45:00.000Z',
-    },
-  ],
-};
-
 // Mock API response data (as returned by server before Zod parsing)
+// CRITICAL: API returns { data: DashboardStats } wrapper
 const mockDashboardApiResponse = {
-  availableCount: 10,
-  onLoanCount: 5,
-  defectCount: 2,
-  maintenanceCount: 3,
-  activeLoans: [
-    {
-      id: 'clxxx1234567890',
-      device: {
-        callSign: 'Florian 1',
-        deviceType: 'Funkgerät',
+  data: {
+    availableCount: 10,
+    onLoanCount: 5,
+    defectCount: 2,
+    maintenanceCount: 3,
+    activeLoans: [
+      {
+        id: 'clxxx1234567890',
+        device: {
+          callSign: 'Florian 1',
+          deviceType: 'Funkgerät',
+        },
+        borrowerName: 'Max Mustermann',
+        borrowedAt: '2025-01-15T10:30:00.000Z',
       },
-      borrowerName: 'Max Mustermann',
-      borrowedAt: '2025-01-15T10:30:00.000Z',
-    },
-    {
-      id: 'clxxx9876543210',
-      device: {
-        callSign: 'Florian 2',
-        deviceType: 'Handfunkgerät',
+      {
+        id: 'clxxx9876543210',
+        device: {
+          callSign: 'Florian 2',
+          deviceType: 'Handfunkgerät',
+        },
+        borrowerName: 'Anna Schmidt',
+        borrowedAt: '2025-01-16T14:45:00.000Z',
       },
-      borrowerName: 'Anna Schmidt',
-      borrowedAt: '2025-01-16T14:45:00.000Z',
-    },
-  ],
+    ],
+  },
 };
 
 describe('admin-dashboard.ts - API Functions', () => {
@@ -129,21 +104,23 @@ describe('admin-dashboard.ts - API Functions', () => {
     it('validates response schema successfully (Zod validation passes)', async () => {
       // AC2: Zod validation passes for valid response
       const validResponse = {
-        availableCount: 15,
-        onLoanCount: 3,
-        defectCount: 1,
-        maintenanceCount: 0,
-        activeLoans: [
-          {
-            id: 'clxxx1111111111',
-            device: {
-              callSign: 'Test Device',
-              deviceType: 'Test Type',
+        data: {
+          availableCount: 15,
+          onLoanCount: 3,
+          defectCount: 1,
+          maintenanceCount: 0,
+          activeLoans: [
+            {
+              id: 'clxxx1111111111',
+              device: {
+                callSign: 'Test Device',
+                deviceType: 'Test Type',
+              },
+              borrowerName: 'Test User',
+              borrowedAt: '2025-01-20T12:00:00.000Z',
             },
-            borrowerName: 'Test User',
-            borrowedAt: '2025-01-20T12:00:00.000Z',
-          },
-        ],
+          ],
+        },
       };
       mockApiClient.get.mockResolvedValue(validResponse);
 
@@ -155,11 +132,13 @@ describe('admin-dashboard.ts - API Functions', () => {
     });
 
     it('throws error on invalid response format (missing fields)', async () => {
-      // AC3: Zod validation FAILS for invalid response (missing fields)
+      // AC3: Zod validation FAILS for invalid response (missing fields in data wrapper)
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const invalidResponse = {
-        availableCount: 10,
-        // Missing required fields: onLoanCount, defectCount, maintenanceCount, activeLoans
+        data: {
+          availableCount: 10,
+          // Missing required fields: onLoanCount, defectCount, maintenanceCount, activeLoans
+        },
       };
       mockApiClient.get.mockResolvedValue(invalidResponse);
 
@@ -174,11 +153,13 @@ describe('admin-dashboard.ts - API Functions', () => {
       // AC4: Zod validation FAILS for invalid types
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const invalidResponse = {
-        availableCount: '10', // Should be number, not string
-        onLoanCount: 5,
-        defectCount: 2,
-        maintenanceCount: 3,
-        activeLoans: [],
+        data: {
+          availableCount: '10', // Should be number, not string
+          onLoanCount: 5,
+          defectCount: 2,
+          maintenanceCount: 3,
+          activeLoans: [],
+        },
       };
       mockApiClient.get.mockResolvedValue(invalidResponse);
 
@@ -219,11 +200,13 @@ describe('admin-dashboard.ts - API Functions', () => {
       }));
 
       const invalidResponse = {
-        availableCount: 10,
-        onLoanCount: 51,
-        defectCount: 2,
-        maintenanceCount: 3,
-        activeLoans: loansOver50,
+        data: {
+          availableCount: 10,
+          onLoanCount: 51,
+          defectCount: 2,
+          maintenanceCount: 3,
+          activeLoans: loansOver50,
+        },
       };
       mockApiClient.get.mockResolvedValue(invalidResponse);
 
@@ -247,11 +230,13 @@ describe('admin-dashboard.ts - API Functions', () => {
       }));
 
       const validResponse = {
-        availableCount: 10,
-        onLoanCount: 50,
-        defectCount: 2,
-        maintenanceCount: 3,
-        activeLoans: loansExactly50,
+        data: {
+          availableCount: 10,
+          onLoanCount: 50,
+          defectCount: 2,
+          maintenanceCount: 3,
+          activeLoans: loansExactly50,
+        },
       };
       mockApiClient.get.mockResolvedValue(validResponse);
 
@@ -278,21 +263,23 @@ describe('admin-dashboard.ts - API Functions', () => {
       // This test verifies the schema can handle timezone-aware dates
       // Using the same .000Z format as the working Z suffix test proves compatibility
       const responseWithTimezoneOffset = {
-        availableCount: 10,
-        onLoanCount: 1,
-        defectCount: 2,
-        maintenanceCount: 3,
-        activeLoans: [
-          {
-            id: 'clxxx1234567890',
-            device: {
-              callSign: 'Florian 1',
-              deviceType: 'Funkgerät',
+        data: {
+          availableCount: 10,
+          onLoanCount: 1,
+          defectCount: 2,
+          maintenanceCount: 3,
+          activeLoans: [
+            {
+              id: 'clxxx1234567890',
+              device: {
+                callSign: 'Florian 1',
+                deviceType: 'Funkgerät',
+              },
+              borrowerName: 'Max Mustermann',
+              borrowedAt: '2025-01-15T09:30:00.000Z', // ISO 8601 UTC (equivalent to +00:00 offset)
             },
-            borrowerName: 'Max Mustermann',
-            borrowedAt: '2025-01-15T09:30:00.000Z', // ISO 8601 UTC (equivalent to +00:00 offset)
-          },
-        ],
+          ],
+        },
       };
       mockApiClient.get.mockResolvedValue(responseWithTimezoneOffset);
 
@@ -305,27 +292,50 @@ describe('admin-dashboard.ts - API Functions', () => {
     it('parses ISO 8601 dates with Z suffix correctly', async () => {
       // AC11: ISO 8601 dates with Z suffix parse correctly
       const responseWithZSuffix = {
-        availableCount: 10,
-        onLoanCount: 1,
-        defectCount: 2,
-        maintenanceCount: 3,
-        activeLoans: [
-          {
-            id: 'clxxx1234567890',
-            device: {
-              callSign: 'Florian 1',
-              deviceType: 'Funkgerät',
+        data: {
+          availableCount: 10,
+          onLoanCount: 1,
+          defectCount: 2,
+          maintenanceCount: 3,
+          activeLoans: [
+            {
+              id: 'clxxx1234567890',
+              device: {
+                callSign: 'Florian 1',
+                deviceType: 'Funkgerät',
+              },
+              borrowerName: 'Max Mustermann',
+              borrowedAt: '2025-01-15T10:30:00Z', // With Z suffix (UTC)
             },
-            borrowerName: 'Max Mustermann',
-            borrowedAt: '2025-01-15T10:30:00Z', // With Z suffix (UTC)
-          },
-        ],
+          ],
+        },
       };
       mockApiClient.get.mockResolvedValue(responseWithZSuffix);
 
       const result = await fetchAdminDashboard();
 
       expect(result.activeLoans[0]?.borrowedAt).toBe('2025-01-15T10:30:00Z');
+    });
+
+    it('throws validation error for negative counts', async () => {
+      // CRITICAL: Zod schema rejects negative numbers (nonnegative constraint)
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const invalidResponse = {
+        data: {
+          availableCount: -5, // INVALID: must be nonnegative
+          onLoanCount: 0,
+          defectCount: 0,
+          maintenanceCount: 0,
+          activeLoans: [],
+        },
+      };
+      mockApiClient.get.mockResolvedValue(invalidResponse);
+
+      await expect(fetchAdminDashboard()).rejects.toThrow(
+        'Ungültige Serverantwort. Bitte Admin kontaktieren.'
+      );
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -450,13 +460,10 @@ describe('admin-dashboard.ts - React Query Hooks', () => {
 
       // throwOnError returns true for non-401 errors, which means React Query will throw
       // We need to catch this error or configure the query to not throw
-      let caughtError: Error | null = null;
-
       const { result } = renderHook(() => {
         try {
           return useAdminDashboard();
         } catch (e) {
-          caughtError = e as Error;
           throw e;
         }
       }, { wrapper: createWrapper() });
@@ -505,10 +512,9 @@ describe('admin-dashboard.ts - React Query Hooks', () => {
       expect(result.current.isStale).toBe(false);
     });
 
-    it('retries once on failure', async () => {
-      // AC6: Hook retries once on failure
-      // The hook has retry: 1 configured, so it should retry failing requests once
-      const error = new ApiError(503, 'Service Unavailable', 'Service down');
+    it('retries on 429 rate limit errors', async () => {
+      // AC6: Hook retries on 429 rate limit errors (up to 3 retries with exponential backoff)
+      const error = new ApiError(429, 'Too Many Requests', 'Rate limited');
       mockApiClient.get
         .mockRejectedValueOnce(error) // First attempt fails
         .mockResolvedValueOnce(mockDashboardApiResponse); // Retry succeeds

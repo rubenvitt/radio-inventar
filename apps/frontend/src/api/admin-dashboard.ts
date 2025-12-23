@@ -2,6 +2,7 @@
 // Story 6.2: Admin Dashboard UI - API Client Layer
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { z } from 'zod';
 import { DashboardStatsSchema, type DashboardStats } from '@radio-inventar/shared';
 import { apiClient, ApiError } from './client';
 import { adminDashboardKeys } from '@/lib/queryKeys';
@@ -53,6 +54,16 @@ export function getDashboardErrorMessage(error: unknown): string {
   return 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
 }
 
+// === Response Schemas ===
+
+/**
+ * CRITICAL FIX #1: Response wrapper schema
+ * API returns { data: DashboardStats } but code was parsing response directly
+ */
+const DashboardResponseSchema = z.object({
+  data: DashboardStatsSchema,
+});
+
 // === API Functions ===
 
 /**
@@ -68,11 +79,12 @@ export function getDashboardErrorMessage(error: unknown): string {
 export async function fetchAdminDashboard(): Promise<DashboardStats> {
   const response = await apiClient.get<unknown>('/api/admin/history/dashboard');
 
+  // CRITICAL FIX #1: Validate response wrapper and return unwrapped data
   // Zod validation with parse (throws on validation error)
   // Validation errors are logged to console and thrown
   try {
-    const validated = DashboardStatsSchema.parse(response);
-    return validated;
+    const validated = DashboardResponseSchema.parse(response);
+    return validated.data;
   } catch (error) {
     // Log Zod validation errors to console for debugging (dev only)
     if (import.meta.env.DEV) {
@@ -85,34 +97,51 @@ export async function fetchAdminDashboard(): Promise<DashboardStats> {
 // === React Query Hooks ===
 
 /**
+ * HIGH FIX #3: Calculate retry delay with exponential backoff
+ * 1st retry: 1000ms, 2nd: 2000ms, 3rd: 4000ms
+ */
+const retryDelay = (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 4000);
+
+/**
  * Hook for fetching admin dashboard statistics
  *
  * Features:
  * - Auto-redirect to /admin/login on 401 (session expired)
  * - 30 second cache (staleTime)
- * - Single retry on failure
+ * - HIGH FIX #3: Exponential backoff retry for 429 errors
  * - Error handling for 401, 429, 500, network errors
  *
  * Usage:
  * ```tsx
  * const { data, isLoading, error } = useAdminDashboard();
+ * // Component should handle 401 redirect via useEffect or check error
  * ```
  */
 export function useAdminDashboard() {
   const navigate = useNavigate();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: adminDashboardKeys.stats(),
     queryFn: fetchAdminDashboard,
     staleTime: DASHBOARD_CACHE_TIME_MS,
-    retry: 1, // Retry once on failure
-    throwOnError: (error) => {
-      // Auto-redirect to /admin/login on 401 (unauthorized)
-      if (error instanceof ApiError && error.status === 401) {
-        navigate({ to: '/admin/login' });
-        return false; // Don't throw after redirect
+    // HIGH FIX #3: Only retry on 429 errors with exponential backoff
+    retry: (failureCount, error) => {
+      // Only retry on 429 (rate limit) errors
+      if (error instanceof ApiError && error.status === 429) {
+        // Max 3 retries with exponential backoff
+        return failureCount < 3;
       }
-      return true; // Throw for other errors
+      // Don't retry other errors
+      return false;
     },
+    retryDelay,
   });
+
+  // HIGH FIX #2: Handle 401 redirect outside of query options (React Query v5 compatible)
+  // Navigate to login on 401 error
+  if (query.error instanceof ApiError && query.error.status === 401) {
+    navigate({ to: '/admin/login' });
+  }
+
+  return query;
 }

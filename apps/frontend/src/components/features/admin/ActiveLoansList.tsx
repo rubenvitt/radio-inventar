@@ -76,18 +76,27 @@ export function ActiveLoansList({ loans, maxDisplay = 50 }: ActiveLoansListProps
   // Sanitize all user-generated content AND parse dates before rendering
   // Memoized to avoid re-sanitizing and re-parsing on every render (performance)
   const sanitizedLoansWithTime = useMemo(
-    () => loans.map(loan => ({
-      ...loan,
-      device: {
-        callSign: sanitizeForDisplay(loan.device.callSign),
-        deviceType: sanitizeForDisplay(loan.device.deviceType),
-      },
-      borrowerName: sanitizeForDisplay(loan.borrowerName),
-      formattedTime: formatDistanceToNow(new Date(loan.borrowedAt), {
-        addSuffix: true,
-        locale: de,
-      }),
-    })),
+    () => loans.map(loan => {
+      const parsedDate = new Date(loan.borrowedAt);
+      const formattedTime = isNaN(parsedDate.getTime())
+        ? 'Unbekannt'
+        : sanitizeForDisplay(
+            formatDistanceToNow(parsedDate, {
+              addSuffix: true,
+              locale: de,
+            })
+          );
+
+      return {
+        ...loan,
+        device: {
+          callSign: sanitizeForDisplay(loan.device.callSign),
+          deviceType: sanitizeForDisplay(loan.device.deviceType),
+        },
+        borrowerName: sanitizeForDisplay(loan.borrowerName),
+        formattedTime,
+      };
+    }),
     [loans]
   );
 
@@ -118,9 +127,10 @@ export function ActiveLoansList({ loans, maxDisplay = 50 }: ActiveLoansListProps
           ))}
           {remainingCount > 0 && (
             <div className="text-center pt-4">
-              <Button variant="outline" asChild>
-                <Link to="/admin/history">
-                  ...und {remainingCount} {remainingCount === 1 ? 'weiteres Gerät' : 'weitere'} ansehen
+              <Button variant="outline" size="lg" asChild>
+                {/* TODO: Route /admin/history will be created in Story 6.3 */}
+                <Link to={"/admin/history" as "/admin"}>
+                  ...und {remainingCount} {remainingCount === 1 ? 'weiteres Gerät' : 'weitere Geräte'} ansehen
                 </Link>
               </Button>
             </div>

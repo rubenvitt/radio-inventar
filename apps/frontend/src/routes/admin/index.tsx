@@ -28,7 +28,7 @@ export const Route = createFileRoute('/admin/')({
  */
 function DashboardSkeleton() {
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="container mx-auto p-4 space-y-6" aria-busy="true" aria-label="Dashboard wird geladen">
       {/* Header skeleton */}
       <div className="flex justify-between items-center">
         <Skeleton className="h-9 w-48" />
@@ -36,7 +36,7 @@ function DashboardSkeleton() {
       </div>
 
       {/* Stats cards skeleton - 4 cards in responsive grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="rounded-lg border bg-card p-6 space-y-2">
             <Skeleton className="h-4 w-24" />
@@ -99,7 +99,7 @@ export function Component() {
   // AC5: Loading state
   if (isLoading) return <DashboardSkeleton />;
 
-  // After loading and error guards, data is guaranteed to be defined
+  // Data guard BEFORE ErrorBoundary - data is guaranteed after loading/error checks
   if (!data) return null;
 
   return (

@@ -165,7 +165,7 @@ describe('ActiveLoansList', () => {
       expect(loanItems).toHaveLength(50);
     });
 
-    it('shows "...und X weitere" link when > 50', () => {
+    it('shows "...und X weitere Geräte" link when > 50', () => {
       const loans = Array.from({ length: 75 }, (_, i) =>
         createMockLoan({
           id: `loan-${i}`,
@@ -175,7 +175,7 @@ describe('ActiveLoansList', () => {
 
       render(<ActiveLoansList loans={loans} />);
 
-      expect(screen.getByText('...und 25 weitere ansehen')).toBeInTheDocument();
+      expect(screen.getByText('...und 25 weitere Geräte ansehen')).toBeInTheDocument();
     });
 
     it('link points to /admin/history', () => {
@@ -188,7 +188,7 @@ describe('ActiveLoansList', () => {
 
       render(<ActiveLoansList loans={loans} />);
 
-      const moreText = screen.getByText('...und 25 weitere ansehen');
+      const moreText = screen.getByText('...und 25 weitere Geräte ansehen');
       // Note: Component shows text, actual link would be handled by parent component
       // This test verifies the text is displayed correctly
       expect(moreText).toBeInTheDocument();
@@ -257,7 +257,7 @@ describe('ActiveLoansList', () => {
   });
 
   // ========================================================================
-  // 8.5: XSS Protection tests (5 tests) - CRITICAL
+  // 8.5: XSS Protection tests (6 tests) - CRITICAL
   // ========================================================================
   describe('XSS Protection (AC5) - CRITICAL', () => {
     it('sanitizes callSign with script tags', () => {
@@ -314,6 +314,21 @@ describe('ActiveLoansList', () => {
       expect(borrower.textContent).toContain('John');
     });
 
+    it('sanitizes formattedTime from date-fns output', () => {
+      const loan = createMockLoan({
+        borrowedAt: new Date('2025-01-20T10:00:00Z').toISOString(),
+      });
+
+      render(<ActiveLoansList loans={[loan]} />);
+
+      // Verify sanitizeForDisplay was called for the time string
+      expect(mockSanitize).toHaveBeenCalledWith('vor 2 Stunden');
+
+      // Verify the time is displayed correctly
+      const timeElement = screen.getByTestId('loan-time');
+      expect(timeElement).toHaveTextContent('vor 2 Stunden');
+    });
+
     it('sanitization is memoized (not on every render)', () => {
       const loan = createMockLoan();
       const loansArray = [loan]; // Stable reference
@@ -322,7 +337,7 @@ describe('ActiveLoansList', () => {
       const { rerender } = render(<ActiveLoansList loans={loansArray} />);
 
       const callCountAfterFirstRender = mockSanitize.mock.calls.length;
-      expect(callCountAfterFirstRender).toBe(3); // callSign, deviceType, borrowerName
+      expect(callCountAfterFirstRender).toBe(4); // callSign, deviceType, borrowerName, formattedTime
 
       // Re-render with SAME array reference - useMemo should prevent re-sanitization
       rerender(<ActiveLoansList loans={loansArray} />);
@@ -489,12 +504,16 @@ describe('ActiveLoansList', () => {
       });
 
       // Component should handle invalid dates without crashing
-      // formatDistanceToNow will receive invalid date, but component should still render
+      // Invalid dates should show "Unbekannt"
       expect(() => {
         render(<ActiveLoansList loans={[loanWithInvalidDate]} />);
       }).not.toThrow();
 
       expect(screen.getByTestId('active-loan-item')).toBeInTheDocument();
+
+      // Verify "Unbekannt" is displayed for invalid date
+      const timeElement = screen.getByTestId('loan-time');
+      expect(timeElement).toHaveTextContent('Unbekannt');
     });
 
     it('handles very long borrower names (truncate with ellipsis)', () => {
@@ -538,7 +557,7 @@ describe('ActiveLoansList', () => {
 
       const loanItems = screen.getAllByTestId('active-loan-item');
       expect(loanItems).toHaveLength(10);
-      expect(screen.getByText('...und 20 weitere ansehen')).toBeInTheDocument();
+      expect(screen.getByText('...und 20 weitere Geräte ansehen')).toBeInTheDocument();
     });
 
     it('handles exactly maxDisplay loans without showing "weitere"', () => {
@@ -581,6 +600,80 @@ describe('ActiveLoansList', () => {
   // XSS Protection Edge Cases
   // ========================================================================
   describe('XSS Protection Edge Cases', () => {
+    it('sanitizes javascript: URL scheme in borrowerName', () => {
+      // CRITICAL: Test that dangerous URL schemes are blocked
+      const maliciousLoans = [{
+        id: '1',
+        device: { callSign: 'Test', deviceType: 'Radio' },
+        borrowerName: 'javascript:alert(1)',
+        borrowedAt: new Date().toISOString(),
+      }];
+
+      // Update mock to simulate actual sanitizeForDisplay behavior for URL schemes
+      mockSanitize.mockImplementation((text: string | undefined): string => {
+        if (!text) return '';
+        // Simulate the actual function blocking dangerous URL schemes
+        const dangerousSchemes = /^[\s\x00-\x1F\x7F]*(javascript|data|vbscript|file):/i;
+        if (dangerousSchemes.test(text)) {
+          return ''; // Return empty string for dangerous schemes
+        }
+        return text
+          .replace(/[<>]/g, '')
+          .replace(/["'`]/g, '')
+          .replace(/[\u200B-\u200F\u202A-\u202E]/g, '')
+          .replace(/[\x00-\x1F\x7F]/g, '')
+          .trim();
+      });
+
+      render(<ActiveLoansList loans={maliciousLoans} />);
+
+      // Verify sanitizeForDisplay was called with the malicious input
+      expect(mockSanitize).toHaveBeenCalledWith('javascript:alert(1)');
+
+      // Verify the rendered output does NOT contain the javascript: scheme
+      const borrower = screen.getByTestId('loan-borrower');
+      expect(borrower.textContent).not.toContain('javascript:');
+      expect(borrower.textContent).toBe(''); // Should be empty after sanitization
+    });
+
+    it('sanitizes data: URL scheme in callSign', () => {
+      // CRITICAL: Test that data: URLs are blocked (can execute scripts)
+      const maliciousLoans = [{
+        id: '2',
+        device: {
+          callSign: 'data:text/html,<script>alert(1)</script>',
+          deviceType: 'Radio'
+        },
+        borrowerName: 'Test User',
+        borrowedAt: new Date().toISOString(),
+      }];
+
+      // Update mock to simulate actual sanitizeForDisplay behavior for URL schemes
+      mockSanitize.mockImplementation((text: string | undefined): string => {
+        if (!text) return '';
+        const dangerousSchemes = /^[\s\x00-\x1F\x7F]*(javascript|data|vbscript|file):/i;
+        if (dangerousSchemes.test(text)) {
+          return '';
+        }
+        return text
+          .replace(/[<>]/g, '')
+          .replace(/["'`]/g, '')
+          .replace(/[\u200B-\u200F\u202A-\u202E]/g, '')
+          .replace(/[\x00-\x1F\x7F]/g, '')
+          .trim();
+      });
+
+      render(<ActiveLoansList loans={maliciousLoans} />);
+
+      // Verify sanitizeForDisplay was called with the malicious input
+      expect(mockSanitize).toHaveBeenCalledWith('data:text/html,<script>alert(1)</script>');
+
+      // Verify the rendered output does NOT contain the data: scheme
+      const callsign = screen.getByTestId('loan-callsign');
+      expect(callsign.textContent).not.toContain('data:');
+      expect(callsign.textContent).toBe(''); // Should be empty after sanitization
+    });
+
     it('sanitizes all fields together in a single render', () => {
       const maliciousLoan = createMockLoan({
         device: {
@@ -592,10 +685,12 @@ describe('ActiveLoansList', () => {
 
       render(<ActiveLoansList loans={[maliciousLoan]} />);
 
-      // All three fields should be sanitized
+      // All four fields should be sanitized (callSign, deviceType, borrowerName, formattedTime)
       expect(mockSanitize).toHaveBeenCalledWith('<script>xss1</script>');
       expect(mockSanitize).toHaveBeenCalledWith('<img src=x>');
       expect(mockSanitize).toHaveBeenCalledWith('Test" onclick="alert(1)');
+      // Also verify time was sanitized
+      expect(mockSanitize).toHaveBeenCalledWith('vor 2 Stunden');
     });
 
     it('handles mixed safe and unsafe content', () => {

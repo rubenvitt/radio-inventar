@@ -57,8 +57,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const verfügbarBadge = cards[0] // First card is Verfügbar
 
-      expect(verfügbarBadge).toHaveClass('bg-[#22c55e]')
-      expect(verfügbarBadge).toHaveClass('dark:bg-[#16a34a]')
+      expect(verfügbarBadge).toHaveClass('bg-[#16a34a]')
+      expect(verfügbarBadge).toHaveClass('dark:bg-[#22c55e]')
     })
 
     it('Ausgeliehen card has orange accent', () => {
@@ -67,8 +67,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const ausgeliehenBadge = cards[1] // Second card is Ausgeliehen
 
-      expect(ausgeliehenBadge).toHaveClass('bg-[#f59e0b]')
-      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#d97706]')
+      expect(ausgeliehenBadge).toHaveClass('bg-[#d97706]')
+      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#f59e0b]')
     })
 
     it('Defekt card has red accent', () => {
@@ -77,8 +77,8 @@ describe('DashboardStatsCards', () => {
       const cards = container.querySelectorAll('.rounded-full')
       const defektBadge = cards[2] // Third card is Defekt
 
-      expect(defektBadge).toHaveClass('bg-[#ef4444]')
-      expect(defektBadge).toHaveClass('dark:bg-[#dc2626]')
+      expect(defektBadge).toHaveClass('bg-[#dc2626]')
+      expect(defektBadge).toHaveClass('dark:bg-[#ef4444]')
     })
 
     it('Wartung card has gray accent', () => {
@@ -94,34 +94,34 @@ describe('DashboardStatsCards', () => {
 
   // 7.4: Dark Mode tests (4 tests)
   describe('Dark Mode', () => {
-    it('Green uses #16a34a in dark mode', () => {
+    it('Green uses #22c55e in dark mode', () => {
       const { container } = render(<DashboardStatsCards stats={mockStats} />)
 
       const cards = container.querySelectorAll('.rounded-full')
       const verfügbarBadge = cards[0]
 
       // Exact HEX value per UX spec AC1, AC7
-      expect(verfügbarBadge).toHaveClass('dark:bg-[#16a34a]')
+      expect(verfügbarBadge).toHaveClass('dark:bg-[#22c55e]')
     })
 
-    it('Orange uses #d97706 in dark mode', () => {
+    it('Orange uses #f59e0b in dark mode', () => {
       const { container } = render(<DashboardStatsCards stats={mockStats} />)
 
       const cards = container.querySelectorAll('.rounded-full')
       const ausgeliehenBadge = cards[1]
 
       // Exact HEX value per UX spec AC1, AC7
-      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#d97706]')
+      expect(ausgeliehenBadge).toHaveClass('dark:bg-[#f59e0b]')
     })
 
-    it('Red uses #dc2626 in dark mode', () => {
+    it('Red uses #ef4444 in dark mode', () => {
       const { container } = render(<DashboardStatsCards stats={mockStats} />)
 
       const cards = container.querySelectorAll('.rounded-full')
       const defektBadge = cards[2]
 
       // Exact HEX value per UX spec AC1, AC7
-      expect(defektBadge).toHaveClass('dark:bg-[#dc2626]')
+      expect(defektBadge).toHaveClass('dark:bg-[#ef4444]')
     })
 
     it('Background uses dark theme variables', () => {
@@ -289,13 +289,13 @@ describe('DashboardStatsCards', () => {
 
   // Additional accessibility tests (5 tests)
   describe('Accessibility', () => {
-    it('Count elements have aria-labels', () => {
+    it('Cards have region role with descriptive labels', () => {
       render(<DashboardStatsCards stats={mockStats} />)
 
-      expect(screen.getByLabelText('5 Verfügbar')).toBeInTheDocument()
-      expect(screen.getByLabelText('3 Ausgeliehen')).toBeInTheDocument()
-      expect(screen.getByLabelText('1 Defekt')).toBeInTheDocument()
-      expect(screen.getByLabelText('2 Wartung')).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Verfügbar statistic' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Ausgeliehen statistic' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Defekt statistic' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Wartung statistic' })).toBeInTheDocument()
     })
 
     it('Icons have aria-hidden for screen readers', () => {

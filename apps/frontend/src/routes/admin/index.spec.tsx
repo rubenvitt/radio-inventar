@@ -88,7 +88,7 @@ const mockDashboardData: DashboardStats = {
         deviceType: 'Funkgerät',
       },
       borrowerName: 'Max Mustermann',
-      borrowedAt: new Date('2025-12-20T10:00:00Z'),
+      borrowedAt: '2025-12-20T10:00:00Z',
     },
     {
       id: 'loan-002',
@@ -97,7 +97,7 @@ const mockDashboardData: DashboardStats = {
         deviceType: 'Funkgerät',
       },
       borrowerName: 'Anna Schmidt',
-      borrowedAt: new Date('2025-12-21T14:30:00Z'),
+      borrowedAt: '2025-12-21T14:30:00Z',
     },
   ],
 };
@@ -155,7 +155,7 @@ describe('Admin Dashboard Route', () => {
       const { Route } = await import('./index');
       const Component = Route.options.component;
 
-      const { container } = render(createElement(Component!), { wrapper: createWrapper() });
+      render(createElement(Component!), { wrapper: createWrapper() });
 
       // Count skeleton elements
       const skeletons = screen.getAllByTestId('skeleton');
@@ -176,12 +176,11 @@ describe('Admin Dashboard Route', () => {
   // === 6.4: Error State Tests (3 tests) ===
   describe('Error State', () => {
     it('shows ErrorState component when error exists', async () => {
-      const error = new ApiError(500, 'Internal Server Error', 'Server error');
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
         isLoading: false,
         isFetching: false,
-        error,
+        error: new ApiError(500, 'Internal Server Error', 'Server error'),
         refetch: vi.fn(),
       });
 
@@ -195,12 +194,11 @@ describe('Admin Dashboard Route', () => {
     });
 
     it('ErrorState has retry button', async () => {
-      const error = new Error('Network error');
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
         isLoading: false,
         isFetching: false,
-        error,
+        error: new Error('Network error'),
         refetch: vi.fn(),
       });
 
@@ -215,12 +213,11 @@ describe('Admin Dashboard Route', () => {
 
     it('retry button calls refetch()', async () => {
       const mockRefetch = vi.fn();
-      const error = new ApiError(429, 'Too Many Requests', 'Rate limited');
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
         isLoading: false,
         isFetching: false,
-        error,
+        error: new ApiError(429, 'Too Many Requests', 'Rate limited'),
         refetch: mockRefetch,
       });
 
@@ -383,12 +380,11 @@ describe('Admin Dashboard Route', () => {
       // This test verifies that ErrorState is shown for 401 errors
       // The actual redirect happens in the throwOnError handler of useAdminDashboard
 
-      const error = new ApiError(401, 'Unauthorized', 'Session expired');
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
         isLoading: false,
         isFetching: false,
-        error,
+        error: new ApiError(401, 'Unauthorized', 'Session expired'),
         refetch: vi.fn(),
       });
 
@@ -449,12 +445,11 @@ describe('Admin Dashboard Route', () => {
     });
 
     it('error messages have role="alert"', async () => {
-      const error = new Error('Test error');
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
         isLoading: false,
         isFetching: false,
-        error,
+        error: new Error('Test error'),
         refetch: vi.fn(),
       });
 
@@ -479,13 +474,11 @@ describe('Admin Dashboard Route', () => {
       const { Route } = await import('./index');
       const Component = Route.options.component;
 
-      const { container } = render(createElement(Component!), { wrapper: createWrapper() });
+      render(createElement(Component!), { wrapper: createWrapper() });
 
-      // In loading state, the skeleton container should indicate busy state
-      // Note: The skeleton itself doesn't have aria-busy, but the loading pattern
-      // is communicated through the absence of content and presence of skeleton
-      const skeletons = screen.getAllByTestId('skeleton');
-      expect(skeletons.length).toBeGreaterThan(0);
+      // DashboardSkeleton should have aria-busy="true" and aria-label
+      const loadingContainer = screen.getByLabelText('Dashboard wird geladen');
+      expect(loadingContainer).toHaveAttribute('aria-busy', 'true');
     });
   });
 
