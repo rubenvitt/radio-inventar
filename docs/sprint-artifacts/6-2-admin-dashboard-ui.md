@@ -1,6 +1,6 @@
 # Story 6.2: Admin Dashboard UI
 
-**Status**: in-progress ⚠️ **NEEDS REVIEW FIXES (2025-12-23)**
+**Status**: ready-for-review ✅ **REVIEW FIXES APPLIED (2025-12-23)**
 **Epic**: 6 - Admin-Dashboard, Historie & Reporting
 **Story ID**: 6.2
 **Created**: 2025-12-23
@@ -509,86 +509,71 @@
   - [x] Refresh button responds to touch
   - [x] No double-tap delay (touch-action: manipulation)
 
-### Task 10: Review Follow-ups (AI Code Review 2025-12-23)
+### Task 10: Review Follow-ups (AI Code Review 2025-12-23) ✅ COMPLETED
 
 **🔴 CRITICAL Issues**:
-- [ ] [AI-Review][CRITICAL] Git Commit: Commit all Story 6.2 files to git (currently untracked) [Multiple files]
-  - Files: `apps/frontend/src/api/admin-dashboard.*`, `apps/frontend/src/components/features/admin/Dashboard*`, `apps/frontend/src/components/features/admin/ActiveLoans*`, `apps/frontend/src/routes/admin/index.*`, `apps/frontend/src/lib/queryKeys.ts`
-  - Impact: Work could be lost, no PR possible
-  - Action: `git add` + `git commit` all Story 6.2 files
+- [x] [AI-Review][CRITICAL] Git Commit: Commit all Story 6.2 files to git (currently untracked) [Multiple files]
+  - ✅ FIXED: Committed in 2819499 (2025-12-23)
+  - Files: `apps/frontend/src/api/admin-dashboard.*`, `apps/frontend/src/components/features/admin/Dashboard*`, `apps/frontend/src/components/features/admin/ActiveLoans*`, `apps/frontend/src/routes/admin/index.*`
 
-**🔴 HIGH Severity Issues**:
-- [ ] [AI-Review][HIGH] AC1: Fix OKLCH colors to use exact HEX values from UX spec [apps/frontend/src/globals.css:1-82]
-  - Current: OKLCH color space approximations
-  - Required: Exact HEX (#22c55e, #16a34a, #f59e0b, #d97706, #ef4444, #dc2626)
-  - Fix: Use arbitrary Tailwind values `bg-[#22c55e] dark:bg-[#16a34a]`
+**🔴 HIGH Severity Issues** (All Fixed ✅):
+- [x] [AI-Review][HIGH] AC1: Fix OKLCH colors to use exact HEX values from UX spec
+  - ✅ FIXED: DashboardStatsCards.tsx now uses `bg-[#22c55e] dark:bg-[#16a34a]` etc.
 
-- [ ] [AI-Review][HIGH] AC2: Add clickable link to history page in "...und X weitere" [apps/frontend/src/components/features/admin/ActiveLoansList.tsx:118-122]
-  - Current: Plain text, not clickable
-  - Required: `<Button variant="outline" asChild><Link to="/admin/history">...und {remainingCount} weitere ansehen</Link></Button>`
+- [x] [AI-Review][HIGH] AC2: Add clickable link to history page in "...und X weitere"
+  - ✅ FIXED: ActiveLoansList.tsx uses Button + Link component to /admin/history
 
-- [ ] [AI-Review][HIGH] AC3: Fix skeleton responsive breakpoints to match real component [apps/frontend/src/routes/admin/index.tsx:39]
-  - Current: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
-  - Required: `grid-cols-2 md:grid-cols-4` (match DashboardStatsCards.tsx:63)
-  - Impact: Layout shifts when loading completes
+- [x] [AI-Review][HIGH] AC3: Fix skeleton responsive breakpoints to match real component
+  - ✅ FIXED: admin/index.tsx skeleton now uses `grid-cols-2 md:grid-cols-4`
 
-- [ ] [AI-Review][HIGH] Use dashboard-specific error handler [apps/frontend/src/routes/admin/index.tsx:75]
-  - Current: Generic `getUserFriendlyErrorMessage()`
-  - Required: Import and use `getDashboardErrorMessage` from `@/api/admin-dashboard`
+- [x] [AI-Review][HIGH] Use dashboard-specific error handler
+  - ✅ FIXED: Created DashboardError component using getDashboardErrorMessage
 
-- [ ] [AI-Review][HIGH] Remove console.error in production [apps/frontend/src/api/admin-dashboard.ts:73]
-  - Security: Exposes API response structure to attackers
-  - Fix: Conditional log (dev only) or remove
+- [x] [AI-Review][HIGH] Remove console.error in production
+  - ✅ FIXED: admin-dashboard.ts uses `if (import.meta.env.DEV) console.error(...)`
 
-- [ ] [AI-Review][HIGH] Add ErrorBoundary around dashboard components [apps/frontend/src/routes/admin/index.tsx:104]
-  - Impact: Runtime errors crash entire dashboard
-  - Fix: Wrap content with ErrorBoundary component
+- [x] [AI-Review][HIGH] Add ErrorBoundary around dashboard components
+  - ✅ FIXED: Dashboard wrapped with react-error-boundary
 
-- [ ] [AI-Review][HIGH] Memoize date parsing in ActiveLoansList [apps/frontend/src/components/features/admin/ActiveLoansList.tsx:28-31]
-  - Performance: Creates 50 Date objects per render
-  - Fix: Move `new Date(loan.borrowedAt)` into parent useMemo
+- [x] [AI-Review][HIGH] Memoize date parsing in ActiveLoansList
+  - ✅ FIXED: formatDistanceToNow moved into parent useMemo
 
-**🟡 MEDIUM Severity Issues**:
-- [ ] [AI-Review][MEDIUM] Add file header comment [apps/frontend/src/components/features/admin/DashboardStatsCards.tsx:1]
-  - Consistency: Other files have `// Story 6.2: ...` headers
+**🟡 MEDIUM Severity Issues** (Priority fixes completed ✅):
+- [x] [AI-Review][MEDIUM] Add file header comment
+  - ✅ FIXED: DashboardStatsCards.tsx has `// Story 6.2: ...` header
 
-- [ ] [AI-Review][MEDIUM] Extract magic number to constant [apps/frontend/src/api/admin-dashboard.ts:100]
-  - Current: `staleTime: 30_000` hardcoded
-  - Fix: `const DASHBOARD_CACHE_TIME_MS = 30_000`
+- [x] [AI-Review][MEDIUM] Extract magic number to constant
+  - ✅ FIXED: `const DASHBOARD_CACHE_TIME_MS = 30_000`
 
-- [ ] [AI-Review][MEDIUM] Add TypeScript type for TouchButton props [apps/frontend/src/routes/admin/index.tsx:91]
-  - Type safety: Prevent typos like `touchSize="large"`
+- [x] [AI-Review][MEDIUM] Fix German grammar for singular case
+  - ✅ FIXED: "...und 1 weiteres Gerät ansehen"
 
-- [ ] [AI-Review][MEDIUM] Fix German grammar for singular case [apps/frontend/src/components/features/admin/ActiveLoansList.tsx:119]
-  - Current: "...und 1 weitere" (awkward)
-  - Better: "...und 1 weiteres Gerät" or "...noch 1 Gerät"
+- [x] [AI-Review][MEDIUM] Clarify if "weitere" text should be link
+  - ✅ FIXED: Made it a real clickable link (Button + Link)
 
-- [ ] [AI-Review][MEDIUM] Clarify if "weitere" text should be link [apps/frontend/src/components/features/admin/ActiveLoansList.tsx:119-121]
-  - Current: Looks like text, tests mention link
-  - Decision needed: Make it real link or keep as info?
+- [ ] [AI-Review][MEDIUM] Add TypeScript type for TouchButton props
+  - DEFERRED: Low impact, existing types work correctly
 
-- [ ] [AI-Review][MEDIUM] Extract DashboardSkeleton to separate file [apps/frontend/src/routes/admin/index.tsx:29-64]
-  - Code organization: 35-line inline component
-  - Testing: Hard to test skeleton in isolation
+- [ ] [AI-Review][MEDIUM] Extract DashboardSkeleton to separate file
+  - DEFERRED: Works well inline, no test isolation issues
 
-- [ ] [AI-Review][MEDIUM] Add JSDoc for useAdminDashboard return type [apps/frontend/src/api/admin-dashboard.ts:94-111]
-  - Developer experience: Document `{ data, isLoading, error, refetch, isFetching }`
+- [ ] [AI-Review][MEDIUM] Add JSDoc for useAdminDashboard return type
+  - DEFERRED: Types are self-documenting via TypeScript
 
-- [ ] [AI-Review][MEDIUM] Optimize sanitization for partial updates [apps/frontend/src/components/features/admin/ActiveLoansList.tsx:81-91]
-  - Current: Creates 50 new objects even if only 1 loan changed
-  - Trade-off: Current approach simpler but wasteful
+- [ ] [AI-Review][MEDIUM] Optimize sanitization for partial updates
+  - DEFERRED: Current approach is simpler, performance is acceptable
 
-**🟢 LOW Severity Issues**:
-- [ ] [AI-Review][LOW] Use prefers-reduced-motion for animations [apps/frontend/src/routes/admin/index.tsx:94]
-  - Accessibility: Spinning animation may cause dizziness
-  - Fix: `motion-safe:animate-spin motion-reduce:animate-none`
+**🟢 LOW Severity Issues** (Bonus fix ✅):
+- [x] [AI-Review][LOW] Use prefers-reduced-motion for animations
+  - ✅ FIXED: Spinner uses `motion-safe:animate-spin motion-reduce:animate-none`
 
-- [ ] [AI-Review][LOW] Use CSS variables for colors instead of hardcoded classes [apps/frontend/src/components/features/admin/DashboardStatsCards.tsx:24-29]
-  - Maintainability: Design system changes require code updates
+- [ ] [AI-Review][LOW] Use CSS variables for colors instead of hardcoded classes
+  - DEFERRED: Arbitrary values meet exact UX spec requirements
 
-- [ ] [AI-Review][LOW] Freeze DASHBOARD_API_ERRORS object [apps/frontend/src/api/admin-dashboard.ts:11-15]
-  - Security: Prevent runtime mutation
-  - Fix: `Object.freeze(DASHBOARD_API_ERRORS)`
+- [ ] [AI-Review][LOW] Freeze DASHBOARD_API_ERRORS object
+  - DEFERRED: Minimal security risk, not modified at runtime
+
+**Summary**: 12/17 fixes applied (all CRITICAL and HIGH severity + key MEDIUM issues)
 
 ---
 
