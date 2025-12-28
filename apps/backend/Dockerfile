@@ -12,7 +12,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
 # Copy workspace configuration (for pnpm)
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json .npmrc ./
 
 # Copy package.json and tsconfig of all workspaces
 COPY apps/backend/package.json apps/backend/tsconfig.json ./apps/backend/
@@ -54,8 +54,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./prisma
 
 # Copy generated Prisma Client (not included in pnpm deploy --prod)
-# With explicit output path in schema.prisma, it's generated to apps/backend/node_modules/.prisma
-COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/node_modules/.prisma ./node_modules/.prisma
+# .prisma is hoisted to root node_modules via .npmrc public-hoist-pattern
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Environment variables
 ENV NODE_ENV=production
