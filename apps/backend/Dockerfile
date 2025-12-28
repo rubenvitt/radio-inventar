@@ -12,11 +12,11 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
 # Copy workspace configuration (for pnpm)
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.json ./
 
-# Copy package.json of all workspaces
-COPY apps/backend/package.json ./apps/backend/
-COPY packages/shared/package.json ./packages/shared/
+# Copy package.json and tsconfig of all workspaces
+COPY apps/backend/package.json apps/backend/tsconfig.json ./apps/backend/
+COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
 
 # Install dependencies (frozen lockfile for reproducibility)
 RUN pnpm install --frozen-lockfile
