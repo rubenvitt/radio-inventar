@@ -1,4 +1,4 @@
-# docker-compose.yml (Development)
+# docker-compose.yml (Development + Full-App Profile)
 services:
   postgres:
     image: postgres:16-alpine
@@ -13,10 +13,50 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radio} -d radio_inventar"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-radio} -d radio_inventar",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Backend-Service (nur mit full-app Profil)
+  backend:
+    profiles: ["full-app"]
+    image: ghcr.io/${GITHUB_REPOSITORY:-local}/radio-inventar-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: radio-inventar-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-radio}:${POSTGRES_PASSWORD:-secret}@postgres:5432/radio_inventar
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:5173}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
 volumes:
   postgres_data:

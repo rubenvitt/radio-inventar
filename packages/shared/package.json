@@ -14,6 +14,7 @@
   "types": "./dist/index.d.ts",
   "_comment_files": "files field kept for documentation of what would be published if package becomes public.",
   "files": ["dist"],
+  "_comment_wildcard_export": "The ./* wildcard export enables direct imports like '@radio-inventar/shared/schemas/device.schema' for tree-shaking and selective imports. TypeScript and bundlers handle the .js/.d.ts extension mapping automatically - consumers must include the file basename (e.g., 'import { DeviceSchema } from \"@radio-inventar/shared/schemas/device.schema\"' NOT \"...schemas/device\").",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,14 +26,17 @@
       "import": "./dist/*.js",
       "default": "./dist/*.js"
     },
-    "_comment_wildcard_export": "The ./* wildcard export enables direct imports like '@radio-inventar/shared/schemas/device.schema' for tree-shaking and selective imports. TypeScript and bundlers handle the .js/.d.ts extension mapping automatically - consumers must include the file basename (e.g., 'import { DeviceSchema } from \"@radio-inventar/shared/schemas/device.schema\"' NOT \"...schemas/device\").",
-    "./package.json": "./package.json"
+    "./package.json": {
+      "default": "./package.json"
+    }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "zod": "^3.24.0"
@@ -45,5 +49,8 @@
       "optional": true
     }
   },
-  "_comment_peerDependencies": "TypeScript is required for BUILD (devDependency in root package.json) but optional for CONSUMPTION: (1) JS-only consumers can use Zod runtime validation without TS, (2) .d.ts files are included in dist/ for TS consumers, (3) TS version is enforced at dev time via root package.json"
+  "_comment_peerDependencies": "TypeScript is required for BUILD (devDependency in root package.json) but optional for CONSUMPTION: (1) JS-only consumers can use Zod runtime validation without TS, (2) .d.ts files are included in dist/ for TS consumers, (3) TS version is enforced at dev time via root package.json",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
 }

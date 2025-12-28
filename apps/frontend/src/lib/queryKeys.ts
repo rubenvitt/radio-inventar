@@ -63,3 +63,33 @@ export const adminDashboardKeys = {
   all: ['adminDashboard'] as const,
   stats: () => [...adminDashboardKeys.all, 'stats'] as const,
 };
+
+// Story 6.3: Admin history query keys
+// Note: Using | undefined for exactOptionalPropertyTypes compatibility
+export interface HistoryQueryFilters {
+  deviceId?: string | undefined;
+  from?: string | undefined;
+  to?: string | undefined;
+  page?: number | undefined;
+  pageSize?: number | undefined;
+  /** H4 FIX: Cache-busting timestamp to force fresh data on export */
+  _t?: number | undefined;
+}
+
+export const adminHistoryKeys = {
+  all: ['adminHistory'] as const,
+  lists: () => [...adminHistoryKeys.all, 'list'] as const,
+  list: (filters?: HistoryQueryFilters) => [...adminHistoryKeys.lists(), filters] as const,
+};
+
+// Story 6.5: Admin print template query keys
+export const adminPrintKeys = {
+  all: ['adminPrint'] as const,
+  template: () => [...adminPrintKeys.all, 'template'] as const,
+};
+
+// First-time setup query keys
+export const setupKeys = {
+  all: ['setup'] as const,
+  status: () => [...setupKeys.all, 'status'] as const,
+};

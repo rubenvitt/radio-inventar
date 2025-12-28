@@ -3,6 +3,9 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import * as express from 'express';
+import * as session from 'express-session';
+import { AUTH_CONFIG } from '@radio-inventar/shared';
+import { getSessionCookieOptions } from './config/session.config';
 import { AppModule } from './app.module';
 
 // Create logger once at module level to avoid double instantiation
@@ -21,7 +24,22 @@ async function bootstrap() {
     const port = configService.get<number>('PORT') || 3000;
 
     // Security: Enable Helmet for security headers
-    app.use(helmet());
+    // [AI-Review Fix] CRITICAL: Added CSP headers for defense-in-depth
+    app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for CSS-in-JS
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: [],
+          frameAncestors: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Required for some frontend patterns
+    }));
 
     // Request body size limits (explicit, default 100kb is too permissive)
     app.use(express.json({ limit: '10kb' }));
@@ -45,6 +63,17 @@ async function bootstrap() {
       origin: finalCorsOrigins.length === 0 ? false : finalCorsOrigins,
       credentials: true,
     });
+
+    // Session configuration
+    app.use(
+      session({
+        name: AUTH_CONFIG.SESSION_COOKIE_NAME,
+        secret: configService.get<string>('SESSION_SECRET') || 'dev-secret-do-not-use-in-prod',
+        resave: false,
+        saveUninitialized: false,
+        cookie: getSessionCookieOptions(),
+      }),
+    );
 
     // Global validation pipe for automatic DTO validation with DoS protection
     app.useGlobalPipes(

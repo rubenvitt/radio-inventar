@@ -1,0 +1,165 @@
+
+> radio-inventar@ dev /Users/rubeen/dev/personal/katschutz/radio-inventar
+> pnpm --filter @radio-inventar/backend --filter @radio-inventar/frontend -r --parallel dev
+
+Scope: 2 of 4 workspace projects
+apps/backend dev$ nest start --watch
+apps/frontend dev$ vite
+apps/backend dev: [2J[3J[H[[90m8:17:07 PM[0m] Starting compilation in watch mode...
+apps/frontend dev: Route file "/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/frontend/src/routes/admin.spec.tsx" does not contain any route piece. This is likely a mistake.
+apps/frontend dev: Route file "/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/frontend/src/routes/loan.spec.tsx" does not contain any route piece. This is likely a mistake.
+apps/frontend dev:   VITE v6.4.1  ready in 478 ms
+apps/frontend dev:   ➜  Local:   http://localhost:5173/
+apps/frontend dev:   ➜  Network: use --host to expose
+apps/backend dev: [[90m8:17:08 PM[0m] Found 0 errors. Watching for file changes.
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +23ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +10ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHealthModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBorrowersModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDevicesModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLoansModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/api/health}:[39m[38;5;3m +3ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/health, GET} route[39m[38;5;3m +1ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDevicesController {/api/devices}:[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/devices, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLoansController {/api/loans}:[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/loans/active, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/loans, POST} route[39m[38;5;3m +1ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/loans/:loanId, PATCH} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mBorrowersController {/api/borrowers}:[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/borrowers/suggestions, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/admin/auth}:[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/auth/login, POST} route[39m[38;5;3m +2ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/auth/logout, POST} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/auth/session, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminDevicesController {/api/admin/devices}:[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices, POST} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices/:id, PATCH} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices/:id/status, PATCH} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices/:id, DELETE} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/devices/:id, GET} route[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mDatabase connection established successfully[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +0ms[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[Bootstrap] [39m[32mApplication is running on: http://[::1]:3000[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:09 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[DevicesController] [39m[32mGET /api/devices?status=all&take=100&skip=0[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[DevicesRepository] [39m[95mFinding devices, take=100, skip=0[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39m[32mGET /api/loans/active[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [32m    LOG[39m [38;5;3m[LoansController] [39mObject(2) {
+apps/backend dev:   take: [33m100[39m,
+apps/backend dev:   skip: [33m0[39m
+apps/backend dev: }
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:11 PM [95m  DEBUG[39m [38;5;3m[LoansRepository] [39m[95mFinding active loans (take=100, skip=0)[39m
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:40 PM [32m    LOG[39m [38;5;3m[AuthController] [39m[32mPOST /api/admin/auth/login[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:40 PM [95m  DEBUG[39m [38;5;3m[AuthRepository] [39m[95mFinding admin by username[39m
+apps/backend dev: [31m[Nest] 95837  - [39m12/21/2025, 8:17:40 PM [31m  ERROR[39m [38;5;3m[HttpExceptionFilter] [39m[31mPOST /api/admin/auth/login - 500[39m
+apps/backend dev: TypeError: Cannot read properties of undefined (reading 'regenerate')
+apps/backend dev:     at <anonymous> (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:90:31)
+apps/backend dev:     at <anonymous> (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:49:5)
+apps/backend dev:     at new Promise (<anonymous>)
+apps/backend dev:     at wrapSessionCallback (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:48:10)
+apps/backend dev:     at AuthService.createSession (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:89:11)
+apps/backend dev:     at AuthController.login (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.controller.ts:59:28)
+apps/backend dev:     at async /Users/rubeen/dev/personal/katschutz/radio-inventar/node_modules/.pnpm/@nestjs+core@11.1.9_@nestjs+common@11.1.9_class-transformer@0.5.1_class-validator@0.14.3_refl_imwmiucpnybk4xpovusvj6yaly/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+apps/backend dev:     at async /Users/rubeen/dev/personal/katschutz/radio-inventar/node_modules/.pnpm/@nestjs+core@11.1.9_@nestjs+common@11.1.9_class-transformer@0.5.1_class-validator@0.14.3_refl_imwmiucpnybk4xpovusvj6yaly/node_modules/@nestjs/core/router/router-proxy.js:9:17
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:17:57 PM [32m    LOG[39m [38;5;3m[AuthController] [39m[32mPOST /api/admin/auth/login[39m
+apps/backend dev: [95m[Nest] 95837  - [39m12/21/2025, 8:17:57 PM [95m  DEBUG[39m [38;5;3m[AuthRepository] [39m[95mFinding admin by username[39m
+apps/backend dev: [31m[Nest] 95837  - [39m12/21/2025, 8:17:57 PM [31m  ERROR[39m [38;5;3m[HttpExceptionFilter] [39m[31mPOST /api/admin/auth/login - 500[39m
+apps/backend dev: TypeError: Cannot read properties of undefined (reading 'regenerate')
+apps/backend dev:     at <anonymous> (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:90:31)
+apps/backend dev:     at <anonymous> (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:49:5)
+apps/backend dev:     at new Promise (<anonymous>)
+apps/backend dev:     at wrapSessionCallback (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:48:10)
+apps/backend dev:     at AuthService.createSession (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.service.ts:89:11)
+apps/backend dev:     at AuthController.login (/Users/rubeen/dev/personal/katschutz/radio-inventar/apps/backend/src/modules/admin/auth/auth.controller.ts:59:28)
+apps/backend dev:     at async /Users/rubeen/dev/personal/katschutz/radio-inventar/node_modules/.pnpm/@nestjs+core@11.1.9_@nestjs+common@11.1.9_class-transformer@0.5.1_class-validator@0.14.3_refl_imwmiucpnybk4xpovusvj6yaly/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+apps/backend dev:     at async /Users/rubeen/dev/personal/katschutz/radio-inventar/node_modules/.pnpm/@nestjs+core@11.1.9_@nestjs+common@11.1.9_class-transformer@0.5.1_class-validator@0.14.3_refl_imwmiucpnybk4xpovusvj6yaly/node_modules/@nestjs/core/router/router-proxy.js:9:17
+apps/backend dev: [2J[3J[H[[90m8:18:20 PM[0m] File change detected. Starting incremental compilation...
+apps/backend dev: [96msrc/main.ts[0m:[93m51[0m:[93m7[0m - [91merror[0m[90m TS2304: [0mCannot find name 'session'.
+apps/backend dev: [7m51[0m       session({
+apps/backend dev: [7m  [0m [91m      ~~~~~~~[0m
+apps/backend dev: [96msrc/main.ts[0m:[93m52[0m:[93m15[0m - [91merror[0m[90m TS2304: [0mCannot find name 'AUTH_CONFIG'.
+apps/backend dev: [7m52[0m         name: AUTH_CONFIG.SESSION_COOKIE_NAME,
+apps/backend dev: [7m  [0m [91m              ~~~~~~~~~~~[0m
+apps/backend dev: [96msrc/main.ts[0m:[93m56[0m:[93m17[0m - [91merror[0m[90m TS2304: [0mCannot find name 'getSessionCookieOptions'.
+apps/backend dev: [7m56[0m         cookie: getSessionCookieOptions(isProduction),
+apps/backend dev: [7m  [0m [91m                ~~~~~~~~~~~~~~~~~~~~~~~[0m
+apps/backend dev: [[90m8:18:20 PM[0m] Found 3 errors. Watching for file changes.
+apps/backend dev: [2J[3J[H[[90m8:18:29 PM[0m] File change detected. Starting incremental compilation...
+apps/backend dev: [96msrc/main.ts[0m:[93m59[0m:[93m41[0m - [91merror[0m[90m TS2554: [0mExpected 0 arguments, but got 1.
+apps/backend dev: [7m59[0m         cookie: getSessionCookieOptions(isProduction),
+apps/backend dev: [7m  [0m [91m                                        ~~~~~~~~~~~~[0m
+apps/backend dev: [[90m8:18:29 PM[0m] Found 1 error. Watching for file changes.
+apps/backend dev: [32m[Nest] 95837  - [39m12/21/2025, 8:18:30 PM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32mDatabase connection closed[39m
+apps/frontend dev: Failed
+apps/backend dev: Failed

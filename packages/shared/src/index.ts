@@ -64,11 +64,26 @@
  * context-appropriate naming: LOAN uses "borrowerName" (relationship context), BORROWER uses "name" (entity context).
  */
 
+// Zod error map (imported by schemas)
+export { germanErrorMap } from './lib/zod-error-map.js';
+
 // Device schemas and types
-export * from './schemas/device.schema';
+export * from './schemas/device.schema.js';
+
+// Admin schemas and types
+export * from './schemas/admin.schema.js';
 
 // Loan schemas and types
-export * from './schemas/loan.schema';
+export * from './schemas/loan.schema.js';
 
 // Borrower schemas and types
-export * from './schemas/borrower.schema';
+export * from './schemas/borrower.schema.js';
+
+// API error schema and types
+export * from './schemas/api-error.schema.js';
+
+// Setup schemas and types
+export * from './schemas/setup.schema.js';
+
+// Shared constants
+export * from './constants/index.js';

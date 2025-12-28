@@ -85,6 +85,7 @@ export const HistoryItemSchema = z.object({
   device: z.object({
     id: z.string().cuid(),
     callSign: z.string(),
+    serialNumber: z.string().nullable(), // Story 6.4: Required for CSV export (AC3)
     deviceType: z.string(),
     status: z.string(),
   }),

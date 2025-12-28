@@ -38,6 +38,7 @@ export interface HistoryResult {
     device: {
       id: string;
       callSign: string;
+      serialNumber: string | null; // Story 6.4: Required for CSV export (AC3)
       deviceType: string;
       status: string;
     };
@@ -173,6 +174,7 @@ export class HistoryRepository {
               select: {
                 id: true,
                 callSign: true,
+                serialNumber: true, // Story 6.4: Required for CSV export (AC3)
                 deviceType: true,
                 status: true,
               }

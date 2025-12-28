@@ -81,7 +81,7 @@ development_status:
   epic-6: in-progress
   6-1-backend-api-dashboard-historie: done
   6-2-admin-dashboard-ui: done
-  6-3-admin-historie-ui-filter: backlog
-  6-4-csv-export-historie: backlog
-  6-5-druckbare-geraete-liste-qr-code: backlog
+  6-3-admin-historie-ui-filter: done
+  6-4-csv-export-historie: review  # All 6 HIGH issues fixed - 2025-12-26
+  6-5-druckbare-geraete-liste-qr-code: ready-for-review  # Implementation complete - 2025-12-28
   epic-6-retrospective: optional

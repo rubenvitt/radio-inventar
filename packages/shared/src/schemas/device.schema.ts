@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { germanErrorMap } from '../lib/zod-error-map.js';
+
+// Konfiguriere Zod mit deutschen Fehlermeldungen
+z.setErrorMap(germanErrorMap);
 
 /**
  * Maximum length constraints for device fields.
@@ -135,6 +139,12 @@ const createNullishStringTransform = (maxLength: number) =>
  * @see {@link Device} - TypeScript type with status property of type DeviceStatus
  */
 export const DeviceStatusEnum = z.enum(['AVAILABLE', 'ON_LOAN', 'DEFECT', 'MAINTENANCE']);
+
+/**
+ * Admin-settable device status enum.
+ * Excludes ON_LOAN which is managed by the loan system.
+ */
+export const DeviceStatusAdminUpdateEnum = z.enum(['AVAILABLE', 'DEFECT', 'MAINTENANCE']);
 
 /**
  * Schema for radio device data.
@@ -370,3 +380,8 @@ export type UpdateDevice = z.infer<typeof UpdateDeviceSchema>;
  * }
  */
 export type DeviceStatus = z.infer<typeof DeviceStatusEnum>;
+
+/**
+ * Type representing an admin-settable device status.
+ */
+export type DeviceStatusAdminUpdate = z.infer<typeof DeviceStatusAdminUpdateEnum>;

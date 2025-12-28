@@ -41,6 +41,17 @@ model Loan {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+
   @@index([deviceId])
   @@index([borrowerName])
+  @@index([borrowedAt])
+  @@index([returnedAt])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique @db.VarChar(50)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

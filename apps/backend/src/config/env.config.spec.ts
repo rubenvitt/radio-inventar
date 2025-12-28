@@ -64,6 +64,85 @@ describe('env.config', () => {
         expect(result.data.PORT).toBe(8080);
       }
     });
+
+    describe('PUBLIC_APP_URL validation', () => {
+      it('should use localhost fallback when PUBLIC_APP_URL not provided in development', () => {
+        const env = {
+          NODE_ENV: 'development',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.PUBLIC_APP_URL).toBe('http://localhost:5173');
+        }
+      });
+
+      it('should accept valid HTTPS URL', () => {
+        const env = {
+          NODE_ENV: 'development',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.PUBLIC_APP_URL).toBe('https://radio-inventar.example.com');
+        }
+      });
+
+      it('should accept HTTP URL in development', () => {
+        const env = {
+          NODE_ENV: 'development',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          PUBLIC_APP_URL: 'http://localhost:5173',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.PUBLIC_APP_URL).toBe('http://localhost:5173');
+        }
+      });
+
+      it('should reject HTTP URL in production', () => {
+        const env = {
+          NODE_ENV: 'production',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          PUBLIC_APP_URL: 'http://radio-inventar.example.com',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(false);
+      });
+
+      it('should reject invalid URL format', () => {
+        const env = {
+          NODE_ENV: 'development',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          PUBLIC_APP_URL: 'not-a-valid-url',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(false);
+      });
+
+      it('should require HTTPS in production with explicit URL', () => {
+        const env = {
+          NODE_ENV: 'production',
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.PUBLIC_APP_URL).toBe('https://radio-inventar.example.com');
+        }
+      });
+    });
   });
 
   describe('validateEnv', () => {
@@ -72,11 +151,13 @@ describe('env.config', () => {
         NODE_ENV: 'production',
         PORT: '3001',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        PUBLIC_APP_URL: 'https://radio-inventar.example.com',
       };
 
       const result = validateEnv(validConfig);
       expect(result.NODE_ENV).toBe('production');
       expect(result.PORT).toBe(3001);
+      expect(result.PUBLIC_APP_URL).toBe('https://radio-inventar.example.com');
     });
 
     it('should throw for invalid config', () => {
@@ -85,6 +166,16 @@ describe('env.config', () => {
       };
 
       expect(() => validateEnv(invalidConfig)).toThrow('Invalid environment configuration');
+    });
+
+    it('should throw for HTTP URL in production', () => {
+      const invalidConfig = {
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        PUBLIC_APP_URL: 'http://radio-inventar.example.com',
+      };
+
+      expect(() => validateEnv(invalidConfig)).toThrow();
     });
   });
 });

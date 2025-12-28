@@ -9,10 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ReturnRouteImport } from './routes/return'
 import { Route as LoanRouteImport } from './routes/loan'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminHistoryRouteImport } from './routes/admin/history'
+import { Route as AdminDevicesRouteImport } from './routes/admin/devices'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReturnRoute = ReturnRouteImport.update({
   id: '/return',
   path: '/return',
@@ -23,44 +34,122 @@ const LoanRoute = LoanRouteImport.update({
   path: '/loan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHistoryRoute = AdminHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDevicesRoute = AdminDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
+  '/setup': typeof SetupRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/history': typeof AdminHistoryRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
+  '/setup': typeof SetupRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/history': typeof AdminHistoryRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
+  '/setup': typeof SetupRoute
+  '/admin/devices': typeof AdminDevicesRoute
+  '/admin/history': typeof AdminHistoryRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/loan' | '/return'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/loan'
+    | '/return'
+    | '/setup'
+    | '/admin/devices'
+    | '/admin/history'
+    | '/admin/login'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/loan' | '/return'
-  id: '__root__' | '/' | '/loan' | '/return'
+  to:
+    | '/'
+    | '/loan'
+    | '/return'
+    | '/setup'
+    | '/admin/devices'
+    | '/admin/history'
+    | '/admin/login'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/loan'
+    | '/return'
+    | '/setup'
+    | '/admin/devices'
+    | '/admin/history'
+    | '/admin/login'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   LoanRoute: typeof LoanRoute
   ReturnRoute: typeof ReturnRoute
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/return': {
       id: '/return'
       path: '/return'
@@ -75,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +178,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/history': {
+      id: '/admin/history'
+      path: '/history'
+      fullPath: '/admin/history'
+      preLoaderRoute: typeof AdminHistoryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/devices': {
+      id: '/admin/devices'
+      path: '/devices'
+      fullPath: '/admin/devices'
+      preLoaderRoute: typeof AdminDevicesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminDevicesRoute: typeof AdminDevicesRoute
+  AdminHistoryRoute: typeof AdminHistoryRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminDevicesRoute: AdminDevicesRoute,
+  AdminHistoryRoute: AdminHistoryRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   LoanRoute: LoanRoute,
   ReturnRoute: ReturnRoute,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

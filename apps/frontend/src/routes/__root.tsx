@@ -1,6 +1,9 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet, redirect, useLocation } from '@tanstack/react-router'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Navigation } from '@/components/features/Navigation'
+import { queryClient } from '@/lib/queryClient'
+import { checkSetupStatus } from '@/api/setup'
+import { setupKeys } from '@/lib/queryKeys'
 
 // Error Fallback für Route-Fehler
 function RootErrorComponent({ error }: { error: Error }) {
@@ -22,16 +25,43 @@ function RootErrorComponent({ error }: { error: Error }) {
   )
 }
 
-export const Route = createRootRoute({
-  component: () => (
+// Root component that conditionally shows navigation
+function RootComponent() {
+  const location = useLocation()
+  const isSetupPage = location.pathname === '/setup'
+
+  return (
     <ThemeProvider defaultTheme="dark" storageKey="radio-inventar-theme">
       <div className="min-h-screen bg-background text-foreground">
-        <main className="pb-20">
+        <main className={isSetupPage ? '' : 'pb-20'}>
           <Outlet />
         </main>
-        <Navigation />
+        {/* Hide navigation on setup page */}
+        {!isSetupPage && <Navigation />}
       </div>
     </ThemeProvider>
-  ),
+  )
+}
+
+export const Route = createRootRoute({
+  beforeLoad: async ({ location }) => {
+    // Skip setup check if already on setup page
+    if (location.pathname === '/setup') {
+      return
+    }
+
+    // Check if first-time setup is complete
+    const status = await queryClient.ensureQueryData({
+      queryKey: setupKeys.status(),
+      queryFn: checkSetupStatus,
+      staleTime: Infinity,
+    })
+
+    // If setup not complete, redirect to setup page
+    if (!status.isSetupComplete) {
+      throw redirect({ to: '/setup' })
+    }
+  },
+  component: RootComponent,
   errorComponent: RootErrorComponent,
 })

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { DeviceList } from '@/components/features/DeviceList'
 
 export const Route = createFileRoute('/')({
   component: OverviewPage,
@@ -6,9 +7,8 @@ export const Route = createFileRoute('/')({
 
 function OverviewPage() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Übersicht</h1>
-      <p className="text-muted-foreground">Geräte-Status wird in Story 2.2 implementiert</p>
+    <div className="pb-4">
+      <DeviceList />
     </div>
   )
 }
