@@ -2,6 +2,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Explicit output path ensures consistent location in pnpm workspaces and Docker builds
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
