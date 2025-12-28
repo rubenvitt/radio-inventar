@@ -25,7 +25,7 @@ services:
   # Backend-Service (nur mit full-app Profil)
   backend:
     profiles: ["full-app"]
-    image: ghcr.io/${GITHUB_REPOSITORY:-local}/radio-inventar-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/rubenvitt/radio-inventar/radio-inventar-backend:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
