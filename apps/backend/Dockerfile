@@ -4,7 +4,7 @@
 # ============================================
 # Stage 1: Build
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
@@ -40,7 +40,7 @@ RUN pnpm --filter @radio-inventar/backend --prod deploy /app/production
 # ============================================
 # Stage 2: Production
 # ============================================
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
 # Security: Non-root user
 RUN addgroup --system --gid 1001 nodejs && \
