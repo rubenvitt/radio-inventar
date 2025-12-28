@@ -53,6 +53,9 @@ COPY --from=builder --chown=nestjs:nodejs /app/production/node_modules ./node_mo
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./prisma
 
+# Copy generated Prisma Client (not included in pnpm deploy --prod)
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
