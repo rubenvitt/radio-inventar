@@ -31,7 +31,13 @@ RUN pnpm --filter @radio-inventar/shared build
 # 2. Generate Prisma Client
 RUN pnpm --filter @radio-inventar/backend exec prisma generate
 
-# 3. Build backend
+# 3. Copy generated Prisma client to a known location for production stage
+# In pnpm workspaces, the client may be generated in the pnpm store
+RUN mkdir -p /app/prisma-generated && \
+    PRISMA_CLIENT_PATH=$(find /app/node_modules -path "*/.prisma/client" -type d | head -1) && \
+    cp -r "$PRISMA_CLIENT_PATH" /app/prisma-generated/
+
+# 4. Build backend
 RUN pnpm --filter @radio-inventar/backend build
 
 # Keep only production dependencies (tree-shaking)
@@ -53,9 +59,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/production/node_modules ./node_mo
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./prisma
 
-# Copy generated Prisma Client (not included in pnpm deploy --prod)
-# With pnpm workspaces, Prisma client is generated to root node_modules/.prisma
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+# Copy generated Prisma Client from known location
+COPY --from=builder --chown=nestjs:nodejs /app/prisma-generated/client ./node_modules/.prisma/client
 
 # Environment variables
 ENV NODE_ENV=production

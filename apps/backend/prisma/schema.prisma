@@ -2,9 +2,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  // Generate to root node_modules so @prisma/client (hoisted by pnpm) can find it
-  // Path is relative to this schema file: prisma/ -> backend/ -> apps/ -> root/
-  output   = "../../../node_modules/.prisma/client"
 }
 
 datasource db {
