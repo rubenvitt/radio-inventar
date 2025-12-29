@@ -9,7 +9,10 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     // Override moduleResolution to node16 for ESM package - ensures .js extensions in imports
     "module": "node16",
-    "moduleResolution": "node16"
+    "moduleResolution": "node16",
+    // Skip type checking of declaration files in node_modules to avoid errors from
+    // unrelated packages (e.g., @types/react-dom requiring DOM types)
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   // Exclude examples, tests, and build artifacts. Test exclusions are proactive for future test implementation.

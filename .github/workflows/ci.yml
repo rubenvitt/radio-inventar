@@ -58,7 +58,7 @@ jobs:
         run: pnpm --filter @radio-inventar/backend exec prisma generate
 
       - name: Run Typecheck
-        run: pnpm --filter @radio-inventar/backend typecheck
+        run: pnpm typecheck
 
       - name: Run Backend Tests
         run: pnpm --filter @radio-inventar/backend test
