@@ -59,24 +59,22 @@ describe('Setup API', () => {
       expect(result).toEqual({ isSetupComplete: true });
     });
 
-    it('should return isSetupComplete: true on network error (fail-safe)', async () => {
+    it('should throw on network error (security: no bypass)', async () => {
       vi.mocked(apiClient.get).mockRejectedValue(new Error('Network error'));
 
-      const result = await checkSetupStatus();
-
-      // Should not block app on network failure
-      expect(result).toEqual({ isSetupComplete: true });
+      // Should throw, not return a default value
+      await expect(checkSetupStatus()).rejects.toThrow('Network error');
     });
 
-    it('should return isSetupComplete: true on invalid response', async () => {
+    it('should return isSetupComplete: false on invalid response (secure default)', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         data: { invalid: 'response' },
       });
 
       const result = await checkSetupStatus();
 
-      // Should assume complete on validation failure
-      expect(result).toEqual({ isSetupComplete: true });
+      // Should assume NOT complete on validation failure (secure default)
+      expect(result).toEqual({ isSetupComplete: false });
     });
   });
 

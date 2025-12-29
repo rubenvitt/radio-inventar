@@ -1,3 +1,6 @@
+import { tokenStorage } from '@/lib/tokenStorage';
+import { API_TOKEN_ERROR_MESSAGES } from '@radio-inventar/shared';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 /** Default timeout for API requests in milliseconds */
@@ -21,9 +24,44 @@ export class TimeoutError extends Error {
   }
 }
 
+/**
+ * Gets headers with API token if available
+ */
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = tokenStorage.get();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+/**
+ * Checks if an error is a token-related 401 error
+ */
+function isTokenError(errorText: string): boolean {
+  return (
+    errorText.includes(API_TOKEN_ERROR_MESSAGES.MISSING_TOKEN) ||
+    errorText.includes(API_TOKEN_ERROR_MESSAGES.INVALID_TOKEN) ||
+    errorText.includes('API-Token')
+  );
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorText = await response.text();
+
+    // If 401 with token error message, clear token and redirect
+    if (response.status === 401 && isTokenError(errorText)) {
+      tokenStorage.remove();
+      window.location.href = '/token-setup';
+      throw new ApiError(response.status, response.statusText, 'Token ungültig');
+    }
+
     throw new ApiError(
       response.status,
       response.statusText,
@@ -72,6 +110,10 @@ async function fetchWithTimeout<T>(
   try {
     const response = await fetch(url, {
       ...options,
+      headers: {
+        ...getHeaders(),
+        ...options.headers,
+      },
       signal,
       credentials: 'include', // Required for session cookies (AC8)
     });
@@ -92,9 +134,6 @@ export const apiClient = {
       `${API_BASE_URL}${endpoint}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       },
       timeoutMs,
     );
@@ -105,9 +144,6 @@ export const apiClient = {
       `${API_BASE_URL}${endpoint}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         ...(data && { body: JSON.stringify(data) }),
       },
       timeoutMs,
@@ -119,9 +155,6 @@ export const apiClient = {
       `${API_BASE_URL}${endpoint}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         ...(data && { body: JSON.stringify(data) }),
       },
       timeoutMs,
@@ -133,9 +166,6 @@ export const apiClient = {
       `${API_BASE_URL}${endpoint}`,
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         ...(data && { body: JSON.stringify(data) }),
       },
       timeoutMs,
@@ -147,9 +177,6 @@ export const apiClient = {
       `${API_BASE_URL}${endpoint}`,
       {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       },
       timeoutMs,
     );

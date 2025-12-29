@@ -51,25 +51,22 @@ function getSetupErrorMessage(error: unknown): string {
 /**
  * Check if first-time setup is complete
  * GET /api/setup/status
+ *
+ * SECURITY: On any error, assume setup is NOT complete and redirect to setup.
+ * This prevents bypassing the first-time setup requirement.
  */
 export async function checkSetupStatus(): Promise<SetupStatusResponse> {
-  try {
-    const response = await apiClient.get<unknown>('/api/setup/status');
+  const response = await apiClient.get<unknown>('/api/setup/status');
 
-    // Backend wraps response in { data: ... } via global interceptor
-    const validated = SetupStatusSchema.safeParse((response as any).data);
-    if (!validated.success) {
-      // If validation fails, assume setup is complete to avoid blocking app
-      return { isSetupComplete: true };
-    }
-
-    return validated.data;
-  } catch (error) {
-    // On network error, assume setup is complete to avoid blocking app
-    // This prevents a failed backend from permanently blocking the UI
-    console.error('Failed to check setup status:', error);
-    return { isSetupComplete: true };
+  // Backend wraps response in { data: ... } via global interceptor
+  const validated = SetupStatusSchema.safeParse((response as any).data);
+  if (!validated.success) {
+    // If validation fails, assume setup is incomplete (safer default)
+    console.error('Invalid setup status response:', validated.error?.message ?? 'Unknown validation error');
+    return { isSetupComplete: false };
   }
+
+  return validated.data;
 }
 
 /** Validation schema for admin creation input */

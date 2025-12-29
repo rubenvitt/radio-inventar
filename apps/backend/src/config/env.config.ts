@@ -8,6 +8,7 @@ export const envSchema = z
     DATABASE_URL: z.string(),
     ALLOWED_ORIGINS: z.string().optional().default(''),
     PUBLIC_APP_URL: z.string().optional(),
+    API_TOKEN: z.string().min(32, 'API_TOKEN must be at least 32 characters for security'),
   })
   .superRefine((data, ctx) => {
     // Apply default for PUBLIC_APP_URL

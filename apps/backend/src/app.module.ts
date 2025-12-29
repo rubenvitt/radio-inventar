@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { validateEnv } from './config/env.config';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
@@ -9,8 +9,10 @@ import { LoansModule } from './modules/loans/loans.module';
 import { BorrowersModule } from './modules/borrowers/borrowers.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SetupModule } from './modules/setup/setup.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { ApiTokenGuard } from './common/guards/api-token.guard';
 
 @Module({
   imports: [
@@ -25,9 +27,14 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     BorrowersModule,
     AdminModule,
     SetupModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ApiTokenGuard,
+    },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
@@ -38,4 +45,4 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

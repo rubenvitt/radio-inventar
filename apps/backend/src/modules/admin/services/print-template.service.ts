@@ -76,13 +76,23 @@ export class PrintTemplateService {
 
   /**
    * Gets and validates the PUBLIC_APP_URL from configuration.
+   * Includes API_TOKEN as query parameter for auto-authentication via QR code.
    */
   private getAppUrl(): string {
     const appUrl = this.configService.get<string>('PUBLIC_APP_URL');
     if (!appUrl) {
       throw new Error('PUBLIC_APP_URL not configured');
     }
-    return appUrl;
+
+    const apiToken = this.configService.get<string>('API_TOKEN');
+    if (!apiToken) {
+      throw new Error('API_TOKEN not configured');
+    }
+
+    // Append token as query parameter for auto-authentication
+    const url = new URL(appUrl);
+    url.searchParams.set('token', apiToken);
+    return url.toString();
   }
 
   /**

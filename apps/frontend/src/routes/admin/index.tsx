@@ -6,6 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useAdminDashboard, getDashboardErrorMessage } from '@/api/admin-dashboard';
 import { DashboardStatsCards } from '@/components/features/admin/DashboardStatsCards';
 import { ActiveLoansList } from '@/components/features/admin/ActiveLoansList';
+import { AppQRCode } from '@/components/features/admin/AppQRCode';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -126,8 +127,17 @@ export function Component() {
         {/* AC2: Statistics Cards */}
         <DashboardStatsCards stats={data} />
 
-        {/* AC3: Active Loans List */}
-        <ActiveLoansList loans={data.activeLoans} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* AC3: Active Loans List */}
+          <div className="lg:col-span-2">
+            <ActiveLoansList loans={data.activeLoans} />
+          </div>
+
+          {/* App QR Code for sharing */}
+          <div>
+            <AppQRCode />
+          </div>
+        </div>
       </div>
     </ErrorBoundary>
   );

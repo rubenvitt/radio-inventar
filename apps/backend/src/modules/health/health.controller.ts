@@ -1,5 +1,6 @@
 import { Controller, Get, HttpStatus, HttpException, Logger } from '@nestjs/common';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { BypassApiToken } from '@/common/decorators';
 
 interface HealthResponse {
   status: 'ok' | 'error';
@@ -7,6 +8,7 @@ interface HealthResponse {
   database: 'connected' | 'disconnected';
 }
 
+@BypassApiToken()
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);

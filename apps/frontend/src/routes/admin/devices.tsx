@@ -136,7 +136,7 @@ function DevicesContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-4 space-y-6">
       {/* Header (Task 5.2, Story 6.5) */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold">Geräteverwaltung</h1>

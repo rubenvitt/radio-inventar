@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TokenSetupRouteImport } from './routes/token-setup'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ReturnRouteImport } from './routes/return'
 import { Route as LoanRouteImport } from './routes/loan'
@@ -19,6 +20,11 @@ import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminHistoryRouteImport } from './routes/admin/history'
 import { Route as AdminDevicesRouteImport } from './routes/admin/devices'
 
+const TokenSetupRoute = TokenSetupRouteImport.update({
+  id: '/token-setup',
+  path: '/token-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
+  '/token-setup': typeof TokenSetupRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/history': typeof AdminHistoryRoute
   '/admin/login': typeof AdminLoginRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
+  '/token-setup': typeof TokenSetupRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/history': typeof AdminHistoryRoute
   '/admin/login': typeof AdminLoginRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/loan': typeof LoanRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
+  '/token-setup': typeof TokenSetupRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/history': typeof AdminHistoryRoute
   '/admin/login': typeof AdminLoginRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/loan'
     | '/return'
     | '/setup'
+    | '/token-setup'
     | '/admin/devices'
     | '/admin/history'
     | '/admin/login'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/loan'
     | '/return'
     | '/setup'
+    | '/token-setup'
     | '/admin/devices'
     | '/admin/history'
     | '/admin/login'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/loan'
     | '/return'
     | '/setup'
+    | '/token-setup'
     | '/admin/devices'
     | '/admin/history'
     | '/admin/login'
@@ -139,10 +151,18 @@ export interface RootRouteChildren {
   LoanRoute: typeof LoanRoute
   ReturnRoute: typeof ReturnRoute
   SetupRoute: typeof SetupRoute
+  TokenSetupRoute: typeof TokenSetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/token-setup': {
+      id: '/token-setup'
+      path: '/token-setup'
+      fullPath: '/token-setup'
+      preLoaderRoute: typeof TokenSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
@@ -231,6 +251,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoanRoute: LoanRoute,
   ReturnRoute: ReturnRoute,
   SetupRoute: SetupRoute,
+  TokenSetupRoute: TokenSetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

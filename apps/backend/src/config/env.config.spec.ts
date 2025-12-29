@@ -7,6 +7,7 @@ describe('env.config', () => {
         NODE_ENV: 'development',
         PORT: '3000',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       const result = envSchema.safeParse(validEnv);
@@ -21,6 +22,7 @@ describe('env.config', () => {
     it('should use default values when not provided', () => {
       const minimalEnv = {
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       const result = envSchema.safeParse(minimalEnv);
@@ -35,6 +37,7 @@ describe('env.config', () => {
       const invalidEnv = {
         NODE_ENV: 'invalid',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       const result = envSchema.safeParse(invalidEnv);
@@ -55,6 +58,7 @@ describe('env.config', () => {
       const env = {
         PORT: '8080',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       const result = envSchema.safeParse(env);
@@ -70,6 +74,7 @@ describe('env.config', () => {
         const env = {
           NODE_ENV: 'development',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -84,6 +89,7 @@ describe('env.config', () => {
           NODE_ENV: 'development',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -98,6 +104,7 @@ describe('env.config', () => {
           NODE_ENV: 'development',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'http://localhost:5173',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -112,6 +119,7 @@ describe('env.config', () => {
           NODE_ENV: 'production',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'http://radio-inventar.example.com',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -123,6 +131,7 @@ describe('env.config', () => {
           NODE_ENV: 'development',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'not-a-valid-url',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -134,6 +143,7 @@ describe('env.config', () => {
           NODE_ENV: 'production',
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
         };
 
         const result = envSchema.safeParse(env);
@@ -152,6 +162,7 @@ describe('env.config', () => {
         PORT: '3001',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
         PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       const result = validateEnv(validConfig);
@@ -173,9 +184,29 @@ describe('env.config', () => {
         NODE_ENV: 'production',
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
         PUBLIC_APP_URL: 'http://radio-inventar.example.com',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
       };
 
       expect(() => validateEnv(invalidConfig)).toThrow();
+    });
+
+    it('should reject API_TOKEN shorter than 32 characters', () => {
+      const invalidConfig = {
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'too-short',
+      };
+
+      const result = envSchema.safeParse(invalidConfig);
+      expect(result.success).toBe(false);
+    });
+
+    it('should require API_TOKEN', () => {
+      const missingToken = {
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+      };
+
+      const result = envSchema.safeParse(missingToken);
+      expect(result.success).toBe(false);
     });
   });
 });

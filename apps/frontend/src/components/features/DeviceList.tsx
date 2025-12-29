@@ -62,6 +62,16 @@ export function DeviceList() {
         <p className="text-sm text-muted-foreground text-center">
           Es wurden noch keine Geräte im System erfasst.
         </p>
+        <TouchButton
+          touchSize="lg"
+          variant="default"
+          asChild
+        >
+          <Link to="/admin" className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            Geräte verwalten
+          </Link>
+        </TouchButton>
       </div>
     );
   }
