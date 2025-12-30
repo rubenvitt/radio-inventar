@@ -17,6 +17,7 @@ describe('SetupService', () => {
   const mockRequest = {
     session: {
       regenerate: jest.fn((cb: (err?: Error | null) => void) => cb()),
+      save: jest.fn((cb: (err?: Error | null) => void) => cb()),
       userId: undefined as string | undefined,
       username: undefined as string | undefined,
       isAdmin: undefined as boolean | undefined,
@@ -46,6 +47,7 @@ describe('SetupService', () => {
 
     // Reset mock request session
     mockRequest.session.regenerate = jest.fn((cb: (err?: Error | null) => void) => cb());
+    mockRequest.session.save = jest.fn((cb: (err?: Error | null) => void) => cb());
     mockRequest.session.userId = undefined;
     mockRequest.session.username = undefined;
     mockRequest.session.isAdmin = undefined;

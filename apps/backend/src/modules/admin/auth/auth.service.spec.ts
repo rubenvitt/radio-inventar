@@ -131,6 +131,7 @@ describe('AuthService', () => {
     it('should regenerate session and set data correctly (session fixation prevention)', async () => {
       const mockSession = {
         regenerate: jest.fn((cb) => cb(null)),
+        save: jest.fn((cb) => cb(null)),
         userId: undefined,
         username: undefined,
         isAdmin: undefined,
@@ -152,6 +153,7 @@ describe('AuthService', () => {
     it('should set isAdmin to true for all users', async () => {
       const mockSession = {
         regenerate: jest.fn((cb) => cb(null)),
+        save: jest.fn((cb) => cb(null)),
         userId: undefined,
         username: undefined,
         isAdmin: undefined,
