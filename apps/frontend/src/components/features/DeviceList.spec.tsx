@@ -4,6 +4,20 @@ import { userEvent } from '@testing-library/user-event';
 import { DeviceList } from './DeviceList';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { DeviceWithLoanInfo } from '@/api/devices';
+import type { ReactNode } from 'react';
+
+// Mock TanStack Router hooks
+const mockNavigate = vi.fn();
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual('@tanstack/react-router');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
+      <a href={to} className={className}>{children}</a>
+    ),
+  };
+});
 
 // Mock the hook
 vi.mock('@/api/devices', () => ({
@@ -73,6 +87,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
 describe('DeviceList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
   });
 
   it('renders loading state when isLoading', () => {

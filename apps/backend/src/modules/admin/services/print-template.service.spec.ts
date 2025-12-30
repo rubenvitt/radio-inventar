@@ -117,13 +117,19 @@ describe('PrintTemplateService', () => {
 
       // FIX H2: Test for invalid URL format
       it('should throw error if PUBLIC_APP_URL is not a valid URL', async () => {
-        mockConfigService.get.mockReturnValue('not-a-valid-url');
+        mockConfigService.get.mockImplementation((key: string) => {
+          if (key === 'PUBLIC_APP_URL') return 'not-a-valid-url';
+          if (key === 'API_TOKEN') return 'valid-token';
+          return undefined;
+        });
 
-        // Note: Currently QRCode.toDataURL accepts any string, but this documents the behavior
-        // The URL validation happens at startup via env.config.ts
-        const result = await service.generateDeviceListPDF();
-        // Still generates PDF - URL validation is at startup
-        expect(result).toBeInstanceOf(Buffer);
+        // When URL parsing fails, it throws InternalServerErrorException
+        await expect(service.generateDeviceListPDF()).rejects.toThrow(
+          InternalServerErrorException,
+        );
+        await expect(service.generateDeviceListPDF()).rejects.toThrow(
+          'PDF-Generierung fehlgeschlagen',
+        );
       });
 
       // FIX H1: Test for timeout behavior (25 seconds)

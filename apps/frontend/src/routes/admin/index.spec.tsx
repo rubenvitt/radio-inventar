@@ -68,6 +68,7 @@ vi.mock('lucide-react', () => ({
   XCircle: () => createElement('span', null, 'XCircle Icon'),
   Wrench: () => createElement('span', null, 'Wrench Icon'),
   Radio: () => createElement('span', null, 'Radio Icon'),
+  Copy: () => createElement('span', null, 'Copy Icon'),
 }));
 
 import { useAdminDashboard } from '@/api/admin-dashboard';

@@ -64,6 +64,7 @@ const mockHistoryResponse = {
       device: {
         id: 'clx9876543210987654321098765',
         callSign: 'Florian 4-23',
+        serialNumber: 'SN-12345', // Required by HistoryItemSchema
         deviceType: 'Handfunkgerät',
         status: 'ON_LOAN',
       },
@@ -412,9 +413,10 @@ describe('admin-history API', () => {
     });
 
     it('should retry with exponential backoff on 429 errors', async () => {
+      // Create a QueryClient that doesn't override the hook's retry settings
       const queryClient = new QueryClient({
         defaultOptions: {
-          queries: { retry: false, gcTime: 0 },
+          queries: { gcTime: 0 },
         },
       });
 
@@ -434,12 +436,12 @@ describe('admin-history API', () => {
         () => {
           expect(result.current.isSuccess).toBe(true);
         },
-        { timeout: 10000 }
+        { timeout: 15000 }
       );
 
       // Should have been called 3 times (initial + 2 retries)
       expect(mockedApiClient.get).toHaveBeenCalledTimes(3);
-    });
+    }, 20000); // Increase test timeout to accommodate retry delays
 
     it('should not retry on non-429 errors', async () => {
       mockedApiClient.get.mockRejectedValueOnce(

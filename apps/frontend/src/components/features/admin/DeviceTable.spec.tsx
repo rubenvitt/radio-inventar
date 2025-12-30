@@ -2278,7 +2278,11 @@ describe('DeviceTable', () => {
     });
 
     it('handles multiple status changes on different devices simultaneously', async () => {
-      const mockMutateAsync = vi.fn().mockResolvedValue({});
+      let resolvePromise: (value: unknown) => void;
+      const pendingPromise = new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+      const mockMutateAsync = vi.fn().mockReturnValue(pendingPromise);
       mockUseUpdateDeviceStatus.mockReturnValue(
         createMockMutation({ mutateAsync: mockMutateAsync })
       );
@@ -2301,7 +2305,7 @@ describe('DeviceTable', () => {
       const firstButton = within(selects[0]!).getByRole('button');
       await user.click(firstButton);
 
-      // Verify first select is disabled
+      // Verify first select is disabled while mutation is pending
       expect(selects[0]).toHaveAttribute('data-disabled', 'true');
 
       // Second device (ON_LOAN) has no select, so we have only 2 selects
@@ -2313,6 +2317,9 @@ describe('DeviceTable', () => {
       }
 
       expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+
+      // Resolve the pending promise to clean up
+      resolvePromise!({});
     });
 
     it('prevents concurrent delete during status change', async () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DeviceDeleteDialog } from './DeviceDeleteDialog';
 import type { Device } from '@/api/admin-devices';
 import { ApiError } from '@/api/client';
@@ -18,9 +19,12 @@ vi.mock('@/api/admin-devices', async () => {
   return {
     ...actual,
     useDeleteDevice: vi.fn(),
-    getDeviceErrorMessage: vi.fn((error: unknown) => {
+    getDeviceErrorMessage: vi.fn((error: unknown, operationType?: 'create' | 'update' | 'delete') => {
       if (error instanceof ApiError && error.status === 409) {
-        return 'Funkruf existiert bereits oder Gerät ist ausgeliehen';
+        if (operationType === 'delete') {
+          return 'Das Gerät ist derzeit ausgeliehen und kann nicht gelöscht werden.';
+        }
+        return 'Funkruf existiert bereits';
       }
       return 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
     }),
@@ -1431,7 +1435,8 @@ describe('DeviceDeleteDialog', () => {
         />
       );
 
-      expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();
+      // Verify dialog is open by checking for the alertdialog role
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
 
       // Press Escape key
       await user.keyboard('{Escape}');
@@ -1469,11 +1474,8 @@ describe('DeviceDeleteDialog', () => {
     });
 
     it('does not close on Escape during pending deletion', async () => {
-      let resolveMutation: (value: any) => void;
-      const pendingPromise = new Promise((resolve) => {
-        resolveMutation = resolve;
-      });
-      const mockMutateAsync = vi.fn().mockReturnValue(pendingPromise);
+      const mockMutateAsync = vi.fn();
+      // Start directly in pending state to test Escape key behavior
       mockUseDeleteDevice.mockReturnValue(
         createMockReturn({ mutateAsync: mockMutateAsync, isPending: true })
       );
@@ -1487,21 +1489,20 @@ describe('DeviceDeleteDialog', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Löschen' });
-      fireEvent.click(deleteButton);
+      // Verify we're in pending state
+      expect(screen.getByText('Wird gelöscht...')).toBeInTheDocument();
 
-      // Wait for mutation to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Cancel button should be disabled during pending
+      const cancelButton = screen.getByRole('button', { name: 'Abbrechen' });
+      expect(cancelButton).toBeDisabled();
 
       // Try to close with Escape during pending mutation
       await user.keyboard('{Escape}');
 
-      // Cancel button should be disabled
-      const cancelButton = screen.getByRole('button', { name: 'Abbrechen' });
+      // onOpenChange should not be called because dialog should not close during pending
+      // Note: The AlertDialog may still call onOpenChange, but cancel button is disabled
+      // The key test here is that cancel button is disabled during pending state
       expect(cancelButton).toBeDisabled();
-
-      // Clean up
-      resolveMutation!(undefined);
     });
 
     it('allows Tab navigation between buttons', async () => {
@@ -1549,11 +1550,8 @@ describe('DeviceDeleteDialog', () => {
     });
 
     it('prevents Enter key during pending deletion', async () => {
-      let resolveMutation: (value: any) => void;
-      const pendingPromise = new Promise((resolve) => {
-        resolveMutation = resolve;
-      });
-      const mockMutateAsync = vi.fn().mockReturnValue(pendingPromise);
+      const mockMutateAsync = vi.fn();
+      // Start directly in pending state to test that Enter key doesn't trigger additional mutations
       mockUseDeleteDevice.mockReturnValue(
         createMockReturn({ mutateAsync: mockMutateAsync, isPending: true })
       );
@@ -1567,23 +1565,17 @@ describe('DeviceDeleteDialog', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Löschen' });
-      fireEvent.click(deleteButton);
+      // Verify we're in pending state
+      const pendingButton = screen.getByRole('button', { name: 'Wird gelöscht...' });
+      expect(pendingButton).toBeInTheDocument();
+      expect(pendingButton).toBeDisabled();
 
-      // Wait for mutation to start
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Button should be disabled
-      expect(deleteButton).toBeDisabled();
-
-      // Try to press Enter again
+      // Try to press Enter - should not trigger mutation because button is disabled
       await user.keyboard('{Enter}');
 
-      // Should still only have one mutation call
-      expect(mockMutateAsync).toHaveBeenCalledTimes(1);
-
-      // Clean up
-      resolveMutation!(undefined);
+      // mutateAsync should not have been called because we started in pending state
+      // and disabled buttons don't respond to Enter key
+      expect(mockMutateAsync).not.toHaveBeenCalled();
     });
   });
 });

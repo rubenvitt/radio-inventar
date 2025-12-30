@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 const mockNavigate = vi.fn();
 vi.mock('@tanstack/react-router', async () => {
   const actual = await vi.importActual('@tanstack/react-router');
+  const React = await import('react');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -17,6 +18,10 @@ vi.mock('@tanstack/react-router', async () => {
       ...options,
       path,
     }),
+    // Mock Link component to render as simple anchor tag
+    Link: React.forwardRef(({ to, children, ...props }: { to: string; children: React.ReactNode; [key: string]: unknown }, ref: React.Ref<HTMLAnchorElement>) => (
+      React.createElement('a', { href: to, ref, ...props }, children)
+    )),
   };
 });
 
@@ -230,7 +235,8 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
   // =========================================================================
   describe('9.4: Error Scenarios', () => {
     it('Test 5: 401 redirects to /admin/login', async () => {
-      const error401 = new Error('401 Unauthorized');
+      // 401 errors use ApiError class in the real implementation
+      const error401 = new ApiError(401, 'Unauthorized', 'Unauthorized');
 
       mockUseAdminDashboard.mockReturnValue({
         data: undefined,
@@ -242,9 +248,10 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
 
       render(<AdminDashboardPage />, { wrapper: createWrapper() });
 
-      // Verify error state is shown (generic error message from getUserFriendlyErrorMessage)
+      // Verify error state is shown with dashboard-specific error message
+      // getDashboardErrorMessage returns "Authentifizierung erforderlich" for 401
       await waitFor(() => {
-        expect(screen.getByText(/Sie haben keine Berechtigung für diese Aktion./)).toBeInTheDocument();
+        expect(screen.getByText(/Authentifizierung erforderlich/)).toBeInTheDocument();
       });
 
       // Note: The hook's throwOnError handles the redirect automatically
@@ -280,7 +287,8 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
     });
 
     it('Test 6: 500 shows error message', async () => {
-      const error500 = new Error('500 Internal Server Error');
+      // 500 errors use ApiError class in the real implementation
+      const error500 = new ApiError(500, 'Internal Server Error', 'Internal Server Error');
       const mockRefetch = vi.fn();
 
       mockUseAdminDashboard.mockReturnValue({
@@ -293,9 +301,10 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
 
       render(<AdminDashboardPage />, { wrapper: createWrapper() });
 
-      // Verify 500 error message is displayed (from getUserFriendlyErrorMessage)
+      // Verify 500 error message is displayed (from getDashboardErrorMessage)
+      // getDashboardErrorMessage returns "Server-Fehler. Bitte Admin kontaktieren." for 500
       await waitFor(() => {
-        expect(screen.getByText(/Der Server ist momentan nicht erreichbar. Bitte versuchen Sie es später erneut./)).toBeInTheDocument();
+        expect(screen.getByText(/Server-Fehler. Bitte Admin kontaktieren./)).toBeInTheDocument();
       });
 
       // Verify retry button is present
@@ -316,9 +325,10 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
 
       render(<AdminDashboardPage />, { wrapper: createWrapper() });
 
-      // Verify network error message is displayed (from getUserFriendlyErrorMessage)
+      // Verify network error message is displayed (from getDashboardErrorMessage)
+      // getDashboardErrorMessage returns "Keine Verbindung zum Server" for fetch failed errors
       await waitFor(() => {
-        expect(screen.getByText(/Keine Verbindung zum Server. Bitte prüfen Sie Ihre Internetverbindung./)).toBeInTheDocument();
+        expect(screen.getByText(/Keine Verbindung zum Server/)).toBeInTheDocument();
       });
 
       // Verify retry button is present
@@ -590,11 +600,12 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
       render(<AdminDashboardPage />, { wrapper: createWrapper() });
 
       // Verify "weitere" message is shown
-      expect(screen.getByText(/...und 5 weitere/)).toBeInTheDocument();
+      // ActiveLoansList displays "...und {remainingCount} weitere Geräte ansehen" button
+      expect(screen.getByText(/\.\.\.und 5 weitere Geräte ansehen/)).toBeInTheDocument();
 
-      // Note: In real app, this would be a link to /admin/history
-      // The ActiveLoansList component shows "...und X weitere" as text
-      // Navigation would be implemented in Story 6.3
+      // Verify it's a link to /admin/history
+      const weitereLink = screen.getByRole('link', { name: /weitere Geräte ansehen/ });
+      expect(weitereLink).toHaveAttribute('href', '/admin/history');
     });
 
     it('Test 16: Dashboard route is /admin (default admin page)', () => {
@@ -697,11 +708,12 @@ describe('Admin Dashboard Integration Tests - Task 9', () => {
 
       render(<AdminDashboardPage />, { wrapper: createWrapper() });
 
-      // Verify aria-labels on stat card counts (from DashboardStatsCards component)
-      expect(screen.getByLabelText('15 Verfügbar')).toBeInTheDocument();
-      expect(screen.getByLabelText('8 Ausgeliehen')).toBeInTheDocument();
-      expect(screen.getByLabelText('2 Defekt')).toBeInTheDocument();
-      expect(screen.getByLabelText('3 Wartung')).toBeInTheDocument();
+      // Verify aria-labels on stat cards (from DashboardStatsCards component)
+      // StatCard has aria-label={`${title} statistic`} pattern
+      expect(screen.getByLabelText('Verfügbar statistic')).toBeInTheDocument();
+      expect(screen.getByLabelText('Ausgeliehen statistic')).toBeInTheDocument();
+      expect(screen.getByLabelText('Defekt statistic')).toBeInTheDocument();
+      expect(screen.getByLabelText('Wartung statistic')).toBeInTheDocument();
     });
   });
 });

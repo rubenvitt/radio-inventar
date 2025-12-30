@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+// Mock state for search params
+let mockSearchParams: { deviceId?: string } = {};
+
 // Mock TanStack Router hooks
 const mockNavigate = vi.fn();
 vi.mock('@tanstack/react-router', async () => {
@@ -17,9 +20,20 @@ vi.mock('@tanstack/react-router', async () => {
     createFileRoute: (path: string) => (options: Record<string, unknown>) => ({
       ...options,
       path,
+      fullPath: path,
+      useSearch: () => mockSearchParams,
     }),
   };
 });
+
+// Mock sonner toast
+const mockToast = {
+  success: vi.fn(),
+  error: vi.fn(),
+};
+vi.mock('sonner', () => ({
+  toast: mockToast,
+}));
 
 // Mock the hooks
 vi.mock('@/api/loans', () => ({
@@ -189,14 +203,14 @@ async function completeLoanFlowToConfirm(user: ReturnType<typeof userEvent.setup
   });
   await user.click(deviceCard);
 
-  // Wait for borrower input to appear (conditional rendering)
+  // Wait for borrower input to be enabled (after device selection updates URL)
   const borrowerInput = await screen.findByPlaceholderText(/name eingeben/i);
 
   // Enter borrower name
   await user.type(borrowerInput, TEST_BORROWER_NAME);
 
   // Click confirm button
-  const confirmButton = await screen.findByRole('button', { name: /gerät ausleihen/i });
+  const confirmButton = await screen.findByRole('button', { name: /Gerät ausleihen/i });
   await user.click(confirmButton);
 }
 
@@ -204,6 +218,9 @@ describe('LoanPage Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
+    mockToast.success.mockClear();
+    mockToast.error.mockClear();
+    mockSearchParams = {};
 
     // Mock DOM methods
     Element.prototype.scrollIntoView = vi.fn();
@@ -218,20 +235,92 @@ describe('LoanPage Integration Tests', () => {
     mockUseCreateLoan.mockReturnValue(createMockMutationReturn());
   });
 
-  describe('Test 1: Kompletter Happy-Path (Select → Name → Confirm → Success)', () => {
-    it('erlaubt kompletten Ausleihe-Flow von Device-Auswahl bis Success', async () => {
+  describe('Page Structure and Initial State', () => {
+    it('renders page title and instructions', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('heading', { level: 1, name: /Gerät ausleihen/i })).toBeInTheDocument();
+      expect(screen.getByText(/Wählen Sie ein Gerät/i)).toBeInTheDocument();
+    });
+
+    it('renders step 1 heading for device selection', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('heading', { level: 2, name: /1\. Gerät wählen/i })).toBeInTheDocument();
+    });
+
+    it('renders step 2 heading for borrower input', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('heading', { level: 2, name: /2\. Empfänger angeben/i })).toBeInTheDocument();
+    });
+
+    it('disables borrower input when no device is selected', () => {
+      mockSearchParams = {}; // No device selected
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      expect(borrowerInput).toBeDisabled();
+    });
+
+    it('enables borrower input when device is selected via URL', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      expect(borrowerInput).toBeEnabled();
+    });
+  });
+
+  describe('Device Selection Flow', () => {
+    it('calls navigate to update URL when device is selected', async () => {
+      const user = userEvent.setup();
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const deviceCard = await screen.findByRole('option', {
+        name: new RegExp(TEST_DEVICE_CALLSIGN)
+      });
+      await user.click(deviceCard);
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        search: { deviceId: TEST_DEVICE_ID },
+        replace: true,
+      });
+    });
+
+    it('shows device as selected when deviceId is in URL', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const deviceCard = screen.getByRole('option', {
+        name: new RegExp(TEST_DEVICE_CALLSIGN)
+      });
+      expect(deviceCard).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+
+  describe('Complete Happy Path Flow', () => {
+    it('calls mutate with correct parameters when form is submitted', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      // Start with device already selected
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      // Enter borrower name
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Verify mutate was called
+      // Click confirm button
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
+
+      // Verify mutate was called with correct params
       expect(mockMutate).toHaveBeenCalledWith(
         { deviceId: TEST_DEVICE_ID, borrowerName: TEST_BORROWER_NAME },
         expect.objectContaining({
@@ -239,6 +328,24 @@ describe('LoanPage Integration Tests', () => {
           onError: expect.any(Function),
         })
       );
+    });
+
+    it('shows success toast and navigates to home on successful loan', async () => {
+      const user = userEvent.setup();
+      const mockMutate = vi.fn();
+
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      mockUseCreateLoan.mockReturnValue(
+        createMockMutationReturn({ mutate: mockMutate })
+      );
+
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
+
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
 
       // Trigger success callback
       const mutateCall = mockMutate.mock.calls[0];
@@ -247,176 +354,33 @@ describe('LoanPage Integration Tests', () => {
         options.onSuccess(mockLoanResponse);
       });
 
-      // Verify success screen is shown
-      await waitFor(() => {
-        expect(screen.getByText('Ausleihe erfolgreich!')).toBeInTheDocument();
-      });
-    }, 10000);
+      // Verify success toast was shown
+      expect(mockToast.success).toHaveBeenCalledWith('Gerät erfolgreich ausgeliehen');
+
+      // Verify navigation to home
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/' });
+    });
   });
 
-  describe('Test 2: Success-Anzeige enthält callSign und borrowerName (AC#3)', () => {
-    it('zeigt callSign und borrowerName in der Success-Anzeige an', async () => {
+  describe('Error Handling', () => {
+    it('shows error toast with user-friendly message on 409 conflict', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Trigger success
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onSuccess(mockLoanResponse);
-      });
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
 
-      // Verify success message contains both callSign and borrowerName
-      await waitFor(() => {
-        const text = screen.getByText((content, element) => {
-          const hasText = (node: Element | null): boolean => {
-            if (!node) return false;
-            const text = node.textContent || '';
-            return text.includes(TEST_DEVICE_CALLSIGN) &&
-                   text.includes('ausgeliehen an') &&
-                   text.includes(TEST_BORROWER_NAME);
-          };
-          return hasText(element);
-        });
-        expect(text).toBeInTheDocument();
-      });
-    }, 10000);
-
-    it('sanitizes callSign and borrowerName for XSS protection', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      const maliciousLoanResponse: CreateLoanResponse = {
-        ...mockLoanResponse,
-        borrowerName: '<script>alert("xss")</script>Tim',
-        device: {
-          ...mockLoanResponse.device,
-          callSign: 'F4<>21',
-        },
-      };
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger success with malicious data
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onSuccess(maliciousLoanResponse);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Ausleihe erfolgreich!')).toBeInTheDocument();
-      });
-
-      // Verify dangerous characters are removed
-      expect(screen.queryByText(/<script>/)).not.toBeInTheDocument();
-      const text = screen.getByText((content, element) => {
-        return element?.textContent?.includes('F421') ?? false; // < and > removed
-      });
-      expect(text).toBeInTheDocument();
-    }, 10000);
-  });
-
-  describe('Test 3: Auto-Redirect nach 2 Sekunden (AC#4)', () => {
-    it('redirected nach 2000ms zur Übersicht nach erfolgreicher Ausleihe', async () => {
-      vi.useFakeTimers();
-      const user = userEvent.setup({ delay: null });
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger success
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onSuccess(mockLoanResponse);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Ausleihe erfolgreich!')).toBeInTheDocument();
-      });
-
-      // Verify navigate has not been called yet
-      expect(mockNavigate).not.toHaveBeenCalled();
-
-      // Fast-forward 1999ms - should still not redirect
-      act(() => {
-        vi.advanceTimersByTime(1999);
-      });
-      expect(mockNavigate).not.toHaveBeenCalled();
-
-      // Fast-forward 1ms more (total 2000ms) - should redirect
-      act(() => {
-        vi.advanceTimersByTime(1);
-      });
-
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith({ to: '/' });
-      });
-
-      vi.useRealTimers();
-    }, 10000);
-
-    it('zeigt "Weiterleitung zur Übersicht..." Nachricht im Success-State', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger success
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onSuccess(mockLoanResponse);
-      });
-
-      // Verify redirect message
-      await waitFor(() => {
-        expect(screen.getByText('Weiterleitung zur Übersicht...')).toBeInTheDocument();
-      });
-    }, 10000);
-  });
-
-  describe('Test 4: Fehler-Anzeige bei 409 Conflict (AC#8)', () => {
-    it('zeigt spezifische Fehlermeldung bei 409 Conflict (Gerät bereits ausgeliehen)', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger 409 error
+      // Trigger error callback with 409 conflict
       const conflictError = new Error('409 Conflict: Device already on loan');
       const mutateCall = mockMutate.mock.calls[0];
       const options = mutateCall?.[1];
@@ -424,61 +388,33 @@ describe('LoanPage Integration Tests', () => {
         options.onError(conflictError);
       });
 
-      // Verify error alert is shown with specific message
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
+      // Verify error toast was shown
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Ausleihe fehlgeschlagen',
+        expect.objectContaining({
+          description: expect.stringContaining('Gerät ist bereits ausgeliehen'),
+        })
+      );
+    });
 
-      expect(screen.getByText('Fehler beim Ausleihen')).toBeInTheDocument();
-      expect(screen.getByText(/Dieses Gerät ist bereits ausgeliehen oder nicht verfügbar/i)).toBeInTheDocument();
-
-      // Verify action buttons
-      expect(screen.getByRole('button', { name: /erneut versuchen/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /schließen/i })).toBeInTheDocument();
-    }, 10000);
-
-    it('zeigt 409 Fehlermeldung auch bei "conflict" im Error-Text', async () => {
+    it('shows error toast with network error message', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Trigger conflict error without 409
-      const conflictError = new Error('Resource conflict detected');
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onError(conflictError);
-      });
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-
-      expect(screen.getByText(/Dieses Gerät ist bereits ausgeliehen oder nicht verfügbar/i)).toBeInTheDocument();
-    }, 10000);
-  });
-
-  describe('Test 5: Fehler-Anzeige bei Network Error (AC#9)', () => {
-    it('zeigt spezifische Fehlermeldung bei Network Error', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger network error
+      // Trigger error callback with network error
       const networkError = new Error('Network error: Failed to fetch');
       const mutateCall = mockMutate.mock.calls[0];
       const options = mutateCall?.[1];
@@ -486,57 +422,67 @@ describe('LoanPage Integration Tests', () => {
         options.onError(networkError);
       });
 
-      // Verify error alert with specific network error message
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
+      // Verify error toast was shown
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Ausleihe fehlgeschlagen',
+        expect.objectContaining({
+          description: expect.stringContaining('Keine Verbindung zum Server'),
+        })
+      );
+    });
 
-      expect(screen.getByText('Fehler beim Ausleihen')).toBeInTheDocument();
-      expect(screen.getByText(/Keine Verbindung zum Server.*Internetverbindung/i)).toBeInTheDocument();
-    }, 10000);
-
-    it('zeigt Network Error auch bei "fetch" im Error-Text', async () => {
+    it('does not navigate on error', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Trigger fetch error
-      const fetchError = new Error('fetch failed');
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
+
+      // Clear any navigation from device selection
+      mockNavigate.mockClear();
+
+      // Trigger error callback
+      const testError = new Error('API Error');
       const mutateCall = mockMutate.mock.calls[0];
       const options = mutateCall?.[1];
       act(() => {
-        options.onError(fetchError);
+        options.onError(testError);
       });
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-
-      expect(screen.getByText(/Keine Verbindung zum Server/i)).toBeInTheDocument();
-    }, 10000);
+      // Verify no navigation occurred
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
   });
 
-  describe('Test 6: Form bleibt nach Fehler intakt', () => {
-    it('behält Device-Auswahl und Borrower-Name nach Fehler bei', async () => {
+  describe('Form State Persistence', () => {
+    it('preserves borrower name value in input after error', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Trigger error
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
+
+      // Trigger error callback
       const testError = new Error('API Error');
       const mutateCall = mockMutate.mock.calls[0];
       const options = mutateCall?.[1];
@@ -544,37 +490,28 @@ describe('LoanPage Integration Tests', () => {
         options.onError(testError);
       });
 
-      // Verify error is shown
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
+      // Verify input still has the value
+      expect(borrowerInput).toHaveValue(TEST_BORROWER_NAME);
+    });
 
-      // Verify form is still intact
-      const borrowerInputAfterError = screen.getByPlaceholderText(/name eingeben/i);
-      expect(borrowerInputAfterError).toHaveValue(TEST_BORROWER_NAME);
-
-      // Verify device is still selected
-      const deviceCardAfterError = screen.getByRole('option', { name: new RegExp(TEST_DEVICE_CALLSIGN) });
-      expect(deviceCardAfterError).toHaveAttribute('aria-selected', 'true');
-
-      // Verify confirm button is still enabled
-      const confirmButtonAfterError = screen.getByRole('button', { name: /gerät ausleihen/i });
-      expect(confirmButtonAfterError).toBeEnabled();
-    }, 10000);
-
-    it('erlaubt Retry nach Fehler', async () => {
+    it('allows retry after error with same form values', async () => {
       const user = userEvent.setup();
       const mockMutate = vi.fn();
 
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
         createMockMutationReturn({ mutate: mockMutate })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
 
-      // Trigger error
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      await user.click(confirmButton);
+
+      // Trigger error callback
       const testError = new Error('API Error');
       const mutateCall = mockMutate.mock.calls[0];
       const options = mutateCall?.[1];
@@ -582,146 +519,93 @@ describe('LoanPage Integration Tests', () => {
         options.onError(testError);
       });
 
-      // Verify error is shown
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-
-      // Click retry button
-      const retryButton = screen.getByRole('button', { name: /erneut versuchen/i });
-      await user.click(retryButton);
-
-      // Verify error is dismissed
-      await waitFor(() => {
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      });
-
-      // Try submitting again
-      const confirmButton = screen.getByRole('button', { name: /gerät ausleihen/i });
+      // Click confirm button again to retry
       await user.click(confirmButton);
 
       // Verify mutate was called again (2nd time)
       expect(mockMutate).toHaveBeenCalledTimes(2);
-    }, 10000);
-
-    it('erlaubt Schließen des Fehlers und Fortsetzen', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
-
-      mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
-      );
-
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger error
-      const testError = new Error('API Error');
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onError(testError);
-      });
-
-      // Verify error is shown
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-
-      // Click close button
-      const closeButton = screen.getByRole('button', { name: /schließen/i });
-      await user.click(closeButton);
-
-      // Verify error is dismissed
-      await waitFor(() => {
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      });
-
-      // Verify user can modify name and continue
-      const borrowerInputAfterClose = screen.getByPlaceholderText(/name eingeben/i);
-      await user.clear(borrowerInputAfterClose);
-      await user.type(borrowerInputAfterClose, 'Neuer Name');
-      expect(borrowerInputAfterClose).toHaveValue('Neuer Name');
-    }, 10000);
+    });
   });
 
-  describe('Test 7: Accessibility und ARIA', () => {
-    it('Success-State hat role="status" und aria-live="polite"', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
+  describe('Button States', () => {
+    it('disables confirm button when no device is selected', () => {
+      mockSearchParams = {};
+      render(<LoanPage />, { wrapper: createWrapper() });
 
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      expect(confirmButton).toBeDisabled();
+    });
+
+    it('disables confirm button when borrower name is empty', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      expect(confirmButton).toBeDisabled();
+    });
+
+    it('enables confirm button when device and borrower name are provided', async () => {
+      const user = userEvent.setup();
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      const borrowerInput = screen.getByPlaceholderText(/name eingeben/i);
+      await user.type(borrowerInput, TEST_BORROWER_NAME);
+
+      const confirmButton = screen.getByRole('button', { name: /Gerät ausleihen/i });
+      expect(confirmButton).toBeEnabled();
+    });
+
+    it('shows loading state during submission', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
+        createMockMutationReturn({ isPending: true })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
+      expect(screen.getByText('Wird gespeichert...')).toBeInTheDocument();
+    });
+  });
 
-      // Trigger success
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onSuccess(mockLoanResponse);
-      });
+  describe('Accessibility', () => {
+    it('has main heading at h1 level', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
 
-      // Verify success has correct ARIA attributes
-      await waitFor(() => {
-        const successStatus = screen.getByRole('status');
-        expect(successStatus).toBeInTheDocument();
-        expect(successStatus).toHaveAttribute('aria-live', 'polite');
-      });
-    }, 10000);
+      const mainHeading = screen.getByRole('heading', { level: 1 });
+      expect(mainHeading).toHaveTextContent(/Gerät ausleihen/i);
+    });
 
-    it('Error-State hat role="alert" und aria-live="assertive"', async () => {
-      const user = userEvent.setup();
-      const mockMutate = vi.fn();
+    it('has section headings at h2 level', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
 
+      const h2Headings = screen.getAllByRole('heading', { level: 2 });
+      expect(h2Headings.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('device selector has listbox role', () => {
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+    });
+
+    it('borrower input has combobox role', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
+      render(<LoanPage />, { wrapper: createWrapper() });
+
+      expect(screen.getByRole('combobox')).toBeInTheDocument();
+    });
+
+    it('confirm button has aria-busy when loading', () => {
+      mockSearchParams = { deviceId: TEST_DEVICE_ID };
       mockUseCreateLoan.mockReturnValue(
-        createMockMutationReturn({ mutate: mockMutate })
+        createMockMutationReturn({ isPending: true })
       );
 
       render(<LoanPage />, { wrapper: createWrapper() });
 
-      await completeLoanFlowToConfirm(user);
-
-      // Trigger error
-      const testError = new Error('Test Error');
-      const mutateCall = mockMutate.mock.calls[0];
-      const options = mutateCall?.[1];
-      act(() => {
-        options.onError(testError);
-      });
-
-      // Verify error has correct ARIA attributes
-      await waitFor(() => {
-        const errorAlert = screen.getByRole('alert');
-        expect(errorAlert).toBeInTheDocument();
-        expect(errorAlert).toHaveAttribute('aria-live', 'assertive');
-      });
-    }, 10000);
-
-    it('Page hat semantische Struktur mit section und h1/h2', () => {
-      render(<LoanPage />, { wrapper: createWrapper() });
-
-      // Verify main heading
-      const mainHeading = screen.getByRole('heading', { level: 1, name: /gerät ausleihen/i });
-      expect(mainHeading).toBeInTheDocument();
-
-      // Verify section headings
-      const deviceSelectionHeading = screen.getByRole('heading', { level: 2, name: /1. Gerät auswählen/i });
-      expect(deviceSelectionHeading).toBeInTheDocument();
-
-      const nameInputHeading = screen.getByRole('heading', { level: 2, name: /2. Name eingeben/i });
-      expect(nameInputHeading).toBeInTheDocument();
-
-      // Verify sections have aria-label
-      const deviceSection = screen.getByLabelText('Geräteauswahl');
-      expect(deviceSection).toBeInTheDocument();
-
-      const borrowerSection = screen.getByLabelText('Namenseingabe');
-      expect(borrowerSection).toBeInTheDocument();
+      const button = screen.getByRole('button', { name: /wird gespeichert/i });
+      expect(button).toHaveAttribute('aria-busy', 'true');
     });
   });
 });

@@ -10,8 +10,10 @@ import type { HistoryResponse } from '@radio-inventar/shared';
 
 // Mock the API hooks
 const mockUseAdminHistory = vi.fn();
+const mockUseDevicesForFilter = vi.fn();
 vi.mock('@/api/admin-history', () => ({
   useAdminHistory: (...args: unknown[]) => mockUseAdminHistory(...args),
+  useDevicesForFilter: () => mockUseDevicesForFilter(),
   getHistoryErrorMessage: (error: unknown) => {
     if (error instanceof Error && error.message.includes('401')) {
       return 'Authentifizierung erforderlich';
@@ -60,6 +62,12 @@ vi.mock('@/components/features/admin/HistoryPagination', () => ({
       <button type="button" onClick={() => onPageChange(2)}>Seite 2</button>
       <span>{meta.totalPages} Seiten</span>
     </div>
+  ),
+}));
+
+vi.mock('@/components/features/admin/ExportButton', () => ({
+  ExportButton: ({ disabled }: { disabled: boolean }) => (
+    <button data-testid="export-button" disabled={disabled}>Export</button>
   ),
 }));
 
@@ -129,6 +137,8 @@ describe('AdminHistoryPage Route Component', () => {
     vi.clearAllMocks();
     // Reset search state
     Object.keys(mockSearchState).forEach(key => delete mockSearchState[key]);
+    // Default mock for useDevicesForFilter
+    mockUseDevicesForFilter.mockReturnValue({ data: [] });
   });
 
   // === Loading State Tests ===

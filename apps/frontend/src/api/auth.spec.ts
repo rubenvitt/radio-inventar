@@ -61,11 +61,12 @@ describe('auth.ts - API Functions', () => {
   describe('login()', () => {
     it('successful login returns validated session data', async () => {
       // AC3: Successful login
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const sessionData = {
         username: 'testadmin',
         isValid: true,
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: sessionData });
 
       const result = await login('testadmin', 'password123');
 
@@ -73,7 +74,7 @@ describe('auth.ts - API Functions', () => {
         username: 'testadmin',
         password: 'password123',
       });
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual(sessionData);
     });
 
     it('handles 401 with invalid credentials error message', async () => {
@@ -217,16 +218,17 @@ describe('auth.ts - API Functions', () => {
   describe('checkSession()', () => {
     it('returns session data when authenticated', async () => {
       // AC8: Session persistence
-      const mockSession = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const sessionData = {
         username: 'testadmin',
         isValid: true,
       };
-      mockApiClient.get.mockResolvedValue(mockSession);
+      mockApiClient.get.mockResolvedValue({ data: sessionData });
 
       const result = await checkSession();
 
       expect(mockApiClient.get).toHaveBeenCalledWith('/api/admin/auth/session');
-      expect(result).toEqual(mockSession);
+      expect(result).toEqual(sessionData);
     });
 
     it('returns null on 401 (not authenticated)', async () => {
@@ -283,23 +285,25 @@ describe('auth.ts - API Functions', () => {
   describe('logout()', () => {
     it('successful logout returns message', async () => {
       // AC8: Successful logout
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Erfolgreich abgemeldet',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const result = await logout();
 
       expect(mockApiClient.post).toHaveBeenCalledWith('/api/admin/auth/logout');
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual(logoutData);
     });
 
     it('logout clears session (response validation)', async () => {
       // AC8: Logout invalidates session
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Logged out',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const result = await logout();
 
@@ -504,10 +508,11 @@ describe('auth.ts - React Query Hooks', () => {
     });
 
     it('mutate calls logout() function', async () => {
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Logged out',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
 
@@ -519,10 +524,11 @@ describe('auth.ts - React Query Hooks', () => {
     });
 
     it('clears session from cache on success', async () => {
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Logged out',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -544,10 +550,11 @@ describe('auth.ts - React Query Hooks', () => {
     });
 
     it('redirects on success using navigate', async () => {
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Logged out',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
 
@@ -577,10 +584,11 @@ describe('auth.ts - React Query Hooks', () => {
 
     it('invalidates all auth queries on success', async () => {
       // CRITICAL 5: Missing invalidateQueries test
-      const mockResponse = {
+      // Backend wraps response in { data: ... } via global interceptor
+      const logoutData = {
         message: 'Logged out',
       };
-      mockApiClient.post.mockResolvedValue(mockResponse);
+      mockApiClient.post.mockResolvedValue({ data: logoutData });
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
