@@ -32,13 +32,20 @@ export const getSessionCookieOptions = (): {
     }
   }
 
-  return {
+  const options = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'strict',
+    sameSite: isProduction ? 'none' as const : 'strict' as const,
     path: '/',
     ...(cookieDomain && { domain: cookieDomain }),
   };
+
+  // Debug logging
+  console.log('[Session Config] Cookie options:', JSON.stringify(options));
+  console.log('[Session Config] PUBLIC_APP_URL:', publicUrl);
+  console.log('[Session Config] NODE_ENV:', process.env.NODE_ENV);
+
+  return options;
 };
 
 /**
