@@ -96,7 +96,7 @@ describe('BorrowerInput', () => {
       expect(screen.getByRole('status')).toBeInTheDocument();
     });
 
-    it('zeigt "Keine Vorschlaege" bei leeren Results', async () => {
+    it('zeigt "Keine Vorschläge" bei leeren Results', async () => {
       mockUseBorrowerSuggestions.mockReturnValue(createMockReturn({
         data: [],
       }));
@@ -105,7 +105,7 @@ describe('BorrowerInput', () => {
       await userEvent.click(screen.getByRole('combobox'));
 
       // Text appears in both visible message and aria-live region
-      const messages = screen.getAllByText('Keine Vorschlaege gefunden');
+      const messages = screen.getAllByText('Keine Vorschläge gefunden');
       expect(messages.length).toBeGreaterThanOrEqual(1);
     });
 
