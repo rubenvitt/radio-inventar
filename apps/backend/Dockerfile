@@ -55,6 +55,8 @@ WORKDIR /app
 COPY --from=builder --chown=nestjs:nodejs /app/production/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/backend/prisma ./prisma
+COPY --chown=nestjs:nodejs apps/backend/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 # Generate Prisma Client in production node_modules structure
 # Use explicit version to match @prisma/client (prisma CLI is devDependency, not in prod)
@@ -74,5 +76,5 @@ USER nestjs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Start command
-CMD ["node", "dist/main"]
+# Start command (entrypoint runs migrations first)
+ENTRYPOINT ["./docker-entrypoint.sh"]
