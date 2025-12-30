@@ -5,9 +5,11 @@ import { DeviceCard } from './DeviceCard';
 import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { TouchButton } from '@/components/ui/touch-button';
-import { PackageOpen, RefreshCw, AlertCircle, X, Lock } from 'lucide-react';
+import { PackageOpen, RefreshCw, AlertCircle, X, Lock, Printer, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserFriendlyErrorMessage } from '@/lib/error-messages';
+import { downloadPublicPrintTemplate, triggerBlobDownload, getPrintErrorMessage } from '@/api/print';
+import { toast } from 'sonner';
 
 // Constants
 const EMPTY_STATE_MIN_HEIGHT = 'min-h-[200px]';
@@ -17,6 +19,7 @@ export function DeviceList() {
   const navigate = useNavigate();
   const { data: devices, isLoading, isFetching, isError, error, refetch } = useDevices();
   const [refreshError, setRefreshError] = useState<Error | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Navigate to loan page when a device is selected for borrowing
@@ -40,6 +43,23 @@ export function DeviceList() {
       timeoutRef.current = setTimeout(() => setRefreshError(null), ERROR_AUTO_DISMISS_MS);
     }
   }, [refetch]);
+
+  // Handler for PDF download (desktop only)
+  const handlePrint = useCallback(async () => {
+    setIsPrinting(true);
+    try {
+      const blob = await downloadPublicPrintTemplate();
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `geraete-liste-${date}.pdf`;
+      triggerBlobDownload(blob, filename);
+      toast.success('PDF heruntergeladen');
+    } catch (err) {
+      toast.error(getPrintErrorMessage(err));
+      console.error('PDF download error:', err);
+    } finally {
+      setIsPrinting(false);
+    }
+  }, []);
 
   // Cleanup timeout on unmount to prevent memory leak
   useEffect(() => {
@@ -81,6 +101,20 @@ export function DeviceList() {
       <header className="flex justify-between items-center px-4 py-3">
         <h1 className="text-xl font-semibold">Geräte</h1>
         <div className="flex items-center gap-2">
+          <TouchButton
+            touchSize="lg"
+            variant="outline"
+            onClick={handlePrint}
+            disabled={isPrinting}
+            aria-label="Geräteliste als PDF herunterladen"
+            className="hidden md:flex text-muted-foreground/50 hover:text-foreground"
+          >
+            {isPrinting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Printer className="h-5 w-5" />
+            )}
+          </TouchButton>
           <TouchButton
             touchSize="lg"
             variant="outline"

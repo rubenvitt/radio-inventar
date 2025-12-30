@@ -1,7 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Radio, RotateCcw, LayoutGrid } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
-import { PrintTemplateButton } from './PrintTemplateButton'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -38,7 +37,6 @@ export function Navigation() {
             </Link>
           )
         })}
-        <PrintTemplateButton />
         <ThemeToggle />
       </div>
     </nav>
