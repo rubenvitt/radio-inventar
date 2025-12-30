@@ -416,6 +416,7 @@ describe('AdminDevicesRepository', () => {
 
     it('should delete device successfully with atomic deleteMany', async () => {
       // FIX: delete() now uses findUnique + delete inside transaction to prevent TOCTOU race condition
+      // Also deletes associated loans before deleting the device
       prisma.$transaction.mockImplementation(async (callback) => {
         return callback({
           device: {
@@ -440,6 +441,9 @@ describe('AdminDevicesRepository', () => {
               updatedAt: new Date(),
             }),
           },
+          loan: {
+            deleteMany: jest.fn().mockResolvedValue({ count: 3 }),
+          },
         });
       });
 
@@ -455,6 +459,9 @@ describe('AdminDevicesRepository', () => {
           device: {
             findUnique: jest.fn().mockResolvedValue(null),
             delete: jest.fn(), // Not called when device not found
+          },
+          loan: {
+            deleteMany: jest.fn(), // Not called when device not found
           },
         });
       });
@@ -474,6 +481,9 @@ describe('AdminDevicesRepository', () => {
           device: {
             findUnique: jest.fn().mockResolvedValue(mockDeviceOnLoan),
             delete: jest.fn(), // Not called when status is ON_LOAN
+          },
+          loan: {
+            deleteMany: jest.fn(), // Not called when status is ON_LOAN
           },
         });
       });

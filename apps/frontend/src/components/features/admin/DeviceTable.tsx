@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { StatusBadge } from '@/components/features/StatusBadge';
 import {
   useUpdateDeviceStatus,
@@ -52,14 +52,15 @@ const DeviceTableRow = memo(function DeviceTableRow({
   onEdit,
   onDelete,
 }: DeviceTableRowProps) {
-  const isDeletable = device.status !== 'ON_LOAN';
-  const isStatusDisabled = device.status === 'ON_LOAN' || isUpdating;
+  const isOnLoan = device.status === 'ON_LOAN';
+  const isStatusDisabled = isOnLoan || isUpdating;
 
   // HIGH FIX #5: Memoize sanitization to avoid N+1 problem (600+ calls for 100 devices)
   // Only re-sanitize when device data actually changes
   const sanitizedCallSign = useMemo(() => sanitizeForDisplay(device.callSign), [device.callSign]);
   const sanitizedSerialNumber = useMemo(() => sanitizeForDisplay(device.serialNumber ?? ''), [device.serialNumber]);
   const sanitizedDeviceType = useMemo(() => sanitizeForDisplay(device.deviceType), [device.deviceType]);
+  const sanitizedNotes = useMemo(() => sanitizeForDisplay(device.notes ?? ''), [device.notes]);
 
   return (
     <TableRow>
@@ -75,6 +76,24 @@ const DeviceTableRow = memo(function DeviceTableRow({
 
       {/* Gerätetyp */}
       <TableCell>{sanitizedDeviceType}</TableCell>
+
+      {/* Notizen - mit Tooltip für lange Texte */}
+      <TableCell className="max-w-[200px]">
+        {sanitizedNotes ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="truncate block text-sm text-muted-foreground cursor-help">
+                {sanitizedNotes}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[300px]">
+              <p className="whitespace-pre-wrap">{sanitizedNotes}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="text-muted-foreground/50">-</span>
+        )}
+      </TableCell>
 
       {/* Status - Dropdown or Badge */}
       <TableCell>
@@ -133,32 +152,19 @@ const DeviceTableRow = memo(function DeviceTableRow({
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </Button>
 
-          {/* AC3: Delete button with tooltip for ON_LOAN */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => onDelete(device)}
-                    disabled={!isDeletable || isUpdating || isFetching}
-                    className="min-h-16 min-w-16"
-                    aria-label={`${sanitizedCallSign} löschen`}
-                    aria-disabled={!isDeletable || isUpdating || isFetching}
-                    aria-busy={isUpdating}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {!isDeletable && (
-                <TooltipContent>
-                  <p>Ausgeliehenes Gerät kann nicht gelöscht werden</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          {/* AC3: Delete button - now allows ON_LOAN with warning in dialog */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onDelete(device)}
+            disabled={isUpdating || isFetching}
+            className="min-h-16 min-w-16"
+            aria-label={`${sanitizedCallSign} löschen`}
+            aria-disabled={isUpdating || isFetching}
+            aria-busy={isUpdating}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
         </div>
       </TableCell>
     </TableRow>
@@ -237,9 +243,10 @@ export function DeviceTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[25%]">Rufname</TableHead>
-            <TableHead className="w-[25%]">Seriennummer</TableHead>
-            <TableHead className="w-[20%]">Gerätetyp</TableHead>
+            <TableHead className="w-[20%]">Rufname</TableHead>
+            <TableHead className="w-[15%]">Seriennummer</TableHead>
+            <TableHead className="w-[15%]">Gerätetyp</TableHead>
+            <TableHead className="w-[20%]">Notizen</TableHead>
             <TableHead className="w-[15%]">Status</TableHead>
             <TableHead className="w-[15%] text-right">Aktionen</TableHead>
           </TableRow>
@@ -258,6 +265,9 @@ export function DeviceTable({
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-3/4" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-8 w-28" />

@@ -347,7 +347,7 @@ describe('AdminDevicesController (e2e)', () => {
       }
     });
 
-    it('should return 409 when trying to delete ON_LOAN device', async () => {
+    it('should return 409 when trying to delete ON_LOAN device without force', async () => {
       const response = await request(app.getHttpServer())
         .delete(`/api/admin/devices/${onLoanDeviceId}`)
         .set('Cookie', sessionCookie)
@@ -356,6 +356,45 @@ describe('AdminDevicesController (e2e)', () => {
       expect(response.body).toHaveProperty('statusCode', 409);
       expect(response.body).toHaveProperty('message');
       expect(response.body.message.toLowerCase()).toContain('ausgeliehen');
+    });
+
+    it('should allow force-deletion of ON_LOAN device with ?force=1', async () => {
+      // Create a new ON_LOAN device for this test
+      const device = await prisma.device.create({
+        data: {
+          callSign: 'Florian 4-ONLOAN-FORCE-01',
+          serialNumber: 'SN-ONLOAN-FORCE-001',
+          deviceType: 'Handheld',
+          status: 'ON_LOAN',
+        },
+      });
+
+      // Create a loan to make it truly ON_LOAN
+      await prisma.loan.create({
+        data: {
+          deviceId: device.id,
+          borrowerName: 'Test Borrower for Force Delete',
+          borrowedAt: new Date(),
+        },
+      });
+
+      // Force delete should succeed
+      await request(app.getHttpServer())
+        .delete(`/api/admin/devices/${device.id}?force=1`)
+        .set('Cookie', sessionCookie)
+        .expect(204);
+
+      // Verify device is deleted
+      const deletedDevice = await prisma.device.findUnique({
+        where: { id: device.id },
+      });
+      expect(deletedDevice).toBeNull();
+
+      // Verify associated loans are also deleted
+      const deletedLoans = await prisma.loan.findMany({
+        where: { deviceId: device.id },
+      });
+      expect(deletedLoans).toHaveLength(0);
     });
 
     it('should allow deletion after device is returned', async () => {

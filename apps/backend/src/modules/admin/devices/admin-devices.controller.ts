@@ -293,7 +293,7 @@ export class AdminDevicesController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Gerät kann nicht gelöscht werden, da es ausgeliehen ist',
+    description: 'Gerät kann nicht gelöscht werden, da es ausgeliehen ist (ohne force=1)',
     schema: {
       type: 'object',
       properties: {
@@ -307,11 +307,22 @@ export class AdminDevicesController {
     status: 429,
     description: 'Zu viele Anfragen',
   })
-  async delete(@Param('id', ParseCuid2Pipe) id: string): Promise<void> {
+  @ApiQuery({
+    name: 'force',
+    required: false,
+    type: String,
+    description: 'Mit "1" oder "true" kann ein ausgeliehenes Gerät gelöscht werden',
+    example: '1',
+  })
+  async delete(
+    @Param('id', ParseCuid2Pipe) id: string,
+    @Query('force') force?: string,
+  ): Promise<void> {
+    const forceDelete = force === '1' || force === 'true';
     // Sanitize log input to prevent log injection
     const sanitizedId = this.sanitizeForLog(id);
-    this.logger.log(`DELETE /api/admin/devices/${sanitizedId}`);
-    await this.adminDevicesService.delete(id);
+    this.logger.log(`DELETE /api/admin/devices/${sanitizedId} force=${forceDelete}`);
+    await this.adminDevicesService.delete(id, { force: forceDelete });
   }
 
   /**

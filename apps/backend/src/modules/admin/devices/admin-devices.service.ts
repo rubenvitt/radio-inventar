@@ -24,8 +24,8 @@ export class AdminDevicesService {
     return this.adminDevicesRepository.updateStatus(id, status);
   }
 
-  async delete(id: string): Promise<void> {
-    return this.adminDevicesRepository.delete(id);
+  async delete(id: string, options?: { force?: boolean }): Promise<void> {
+    return this.adminDevicesRepository.delete(id, options);
   }
 
   async findAll(options: FindAllDevicesOptions = {}): Promise<Device[]> {

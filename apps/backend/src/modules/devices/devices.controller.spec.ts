@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
+import { PrintTemplateService } from '../admin/services/print-template.service';
 import { ListDevicesQueryDto } from './dto/list-devices.query';
 
 describe('DevicesController', () => {
@@ -37,9 +38,16 @@ describe('DevicesController', () => {
       findAll: jest.fn(),
     };
 
+    const mockPrintTemplateService = {
+      generateDeviceListPDF: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DevicesController],
-      providers: [{ provide: DevicesService, useValue: mockService }],
+      providers: [
+        { provide: DevicesService, useValue: mockService },
+        { provide: PrintTemplateService, useValue: mockPrintTemplateService },
+      ],
     }).compile();
 
     controller = module.get<DevicesController>(DevicesController);

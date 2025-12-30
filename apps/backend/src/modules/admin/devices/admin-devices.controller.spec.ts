@@ -475,24 +475,42 @@ describe('AdminDevicesController', () => {
       const result = await controller.delete(mockDevice.id);
 
       expect(result).toBeUndefined();
-      expect(service.delete).toHaveBeenCalledWith(mockDevice.id);
+      expect(service.delete).toHaveBeenCalledWith(mockDevice.id, { force: false });
       expect(service.delete).toHaveBeenCalledTimes(1);
+    });
+
+    it('should delete device with force=true when force query param is "1"', async () => {
+      service.delete.mockResolvedValue(undefined);
+
+      const result = await controller.delete(mockDevice.id, '1');
+
+      expect(result).toBeUndefined();
+      expect(service.delete).toHaveBeenCalledWith(mockDevice.id, { force: true });
+    });
+
+    it('should delete device with force=true when force query param is "true"', async () => {
+      service.delete.mockResolvedValue(undefined);
+
+      const result = await controller.delete(mockDevice.id, 'true');
+
+      expect(result).toBeUndefined();
+      expect(service.delete).toHaveBeenCalledWith(mockDevice.id, { force: true });
     });
 
     it('should throw NotFoundException when device not found', async () => {
       service.delete.mockRejectedValue(new NotFoundException('Gerät nicht gefunden'));
 
       await expect(controller.delete('cm4nonexistent123')).rejects.toThrow(NotFoundException);
-      expect(service.delete).toHaveBeenCalledWith('cm4nonexistent123');
+      expect(service.delete).toHaveBeenCalledWith('cm4nonexistent123', { force: false });
     });
 
-    it('should throw ConflictException when device is on loan', async () => {
+    it('should throw ConflictException when device is on loan (without force)', async () => {
       service.delete.mockRejectedValue(
         new ConflictException('Gerät kann nicht gelöscht werden, da es ausgeliehen ist'),
       );
 
       await expect(controller.delete(mockDevice.id)).rejects.toThrow(ConflictException);
-      expect(service.delete).toHaveBeenCalledWith(mockDevice.id);
+      expect(service.delete).toHaveBeenCalledWith(mockDevice.id, { force: false });
     });
 
     it('should propagate database errors', async () => {

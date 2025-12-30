@@ -50,6 +50,11 @@ function DeviceCardComponent({ device, onSelect, disabled, className }: DeviceCa
             <p className="text-sm text-muted-foreground mt-0.5">
               {sanitizeForDisplay(device.deviceType)}
             </p>
+            {device.notes && (
+              <p className="text-sm text-muted-foreground/80 mt-1 line-clamp-2">
+                {sanitizeForDisplay(device.notes)}
+              </p>
+            )}
           </div>
           <StatusBadge status={device.status} showLabel />
         </div>
@@ -94,6 +99,7 @@ function arePropsEqual(
     prevProps.device.id === nextProps.device.id &&
     prevProps.device.callSign === nextProps.device.callSign &&
     prevProps.device.deviceType === nextProps.device.deviceType &&
+    prevProps.device.notes === nextProps.device.notes &&
     prevProps.device.status === nextProps.device.status &&
     prevProps.device.borrowerName === nextProps.device.borrowerName &&
     prevProps.device.borrowedAt?.getTime() === nextProps.device.borrowedAt?.getTime() &&

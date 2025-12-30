@@ -19,21 +19,22 @@ export function ThemeToggle() {
       )}
       aria-label={
         theme === 'dark'
-          ? 'Zu Light Mode wechseln'
+          ? 'Aktuell: Dark Mode. Klicken für Light'
           : theme === 'light'
-            ? 'Zu System Mode wechseln'
-            : 'Zu Dark Mode wechseln'
+            ? 'Aktuell: Light Mode. Klicken für Auto'
+            : 'Aktuell: Auto Mode. Klicken für Dark'
       }
     >
+      {/* Zeigt aktuellen Zustand (nicht nächsten) */}
       {theme === 'dark' ? (
-        <Sun className="h-6 w-6" />
-      ) : theme === 'light' ? (
         <Moon className="h-6 w-6" />
+      ) : theme === 'light' ? (
+        <Sun className="h-6 w-6" />
       ) : (
         <Monitor className="h-6 w-6" />
       )}
       <span className="text-xs mt-1 font-medium">
-        {theme === 'dark' ? 'Light' : theme === 'light' ? 'System' : 'Dark'}
+        {theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto'}
       </span>
     </button>
   )

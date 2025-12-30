@@ -11,9 +11,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useDeleteDevice, getDeviceErrorMessage, type Device } from '@/api/admin-devices';
-import { ApiError } from '@/api/client';
 import { sanitizeForDisplay } from '@/lib/sanitize';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 interface DeviceDeleteDialogProps {
   open: boolean;
@@ -48,10 +47,12 @@ export const DeviceDeleteDialog = memo(function DeviceDeleteDialog({
   device,
 }: DeviceDeleteDialogProps) {
   const deleteDevice = useDeleteDevice();
+  const isOnLoan = device.status === 'ON_LOAN';
 
   const handleDelete = async () => {
     try {
-      await deleteDevice.mutateAsync(device.id);
+      // Use force=true for ON_LOAN devices
+      await deleteDevice.mutateAsync({ id: device.id, force: isOnLoan });
 
       // AC11: Success toast
       toast.success(`Gerät "${sanitizeForDisplay(device.callSign)}" wurde gelöscht`);
@@ -60,17 +61,8 @@ export const DeviceDeleteDialog = memo(function DeviceDeleteDialog({
       onOpenChange(false);
     } catch (error) {
       // FIX MEDIUM #4: Mutation errors handled inline with toast + retry
-      // AC8: Special handling for 409 ON_LOAN conflict
       // MEDIUM #7: Use context-aware error message
       const errorMessage = getDeviceErrorMessage(error, 'delete');
-
-      if (error instanceof ApiError && error.status === 409) {
-        toast.error(errorMessage, {
-          duration: 5000,
-        });
-        onOpenChange(false);
-        return;
-      }
 
       // AC12: Network errors with retry option
       toast.error(errorMessage, {
@@ -95,8 +87,23 @@ export const DeviceDeleteDialog = memo(function DeviceDeleteDialog({
           <AlertDialogTitle>
             Gerät "{sanitizeForDisplay(device.callSign)}" löschen?
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Diese Aktion kann nicht rückgängig gemacht werden.
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              {isOnLoan && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">
+                      Achtung: Dieses Gerät ist aktuell ausgeliehen!
+                    </p>
+                    <p className="text-muted-foreground mt-1">
+                      Das Löschen entfernt auch die aktive Ausleihe und den gesamten Verlauf dieses Geräts.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <p>Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -111,12 +111,21 @@ describe('AdminDevicesService', () => {
   });
 
   describe('delete', () => {
-    it('should delegate to repository', async () => {
+    it('should delegate to repository without options', async () => {
       repository.delete.mockResolvedValue(undefined);
 
       await service.delete(mockDevice.id);
 
-      expect(repository.delete).toHaveBeenCalledWith(mockDevice.id);
+      expect(repository.delete).toHaveBeenCalledWith(mockDevice.id, undefined);
+      expect(repository.delete).toHaveBeenCalledTimes(1);
+    });
+
+    it('should delegate to repository with force option', async () => {
+      repository.delete.mockResolvedValue(undefined);
+
+      await service.delete(mockDevice.id, { force: true });
+
+      expect(repository.delete).toHaveBeenCalledWith(mockDevice.id, { force: true });
       expect(repository.delete).toHaveBeenCalledTimes(1);
     });
   });

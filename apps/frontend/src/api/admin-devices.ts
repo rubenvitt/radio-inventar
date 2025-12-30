@@ -248,10 +248,13 @@ export async function updateDeviceStatus(id: string, status: AdminDeviceStatus):
  * Delete a device
  * DELETE /api/admin/devices/:id
  * AC5: Delete device with confirmation
- * AC6: Returns 409 for ON_LOAN devices
+ * AC6: Returns 409 for ON_LOAN devices (unless force=true)
+ * @param id Device ID
+ * @param options.force If true, allows deletion of ON_LOAN devices
  */
-export async function deleteDevice(id: string): Promise<void> {
-  await apiClient.delete<unknown>(`/api/admin/devices/${id}`);
+export async function deleteDevice(id: string, options?: { force?: boolean }): Promise<void> {
+  const params = options?.force ? '?force=1' : '';
+  await apiClient.delete<unknown>(`/api/admin/devices/${id}${params}`);
 }
 
 // === React Query Hooks (Task 1.4) ===
@@ -463,7 +466,7 @@ export function useDeleteDevice() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deleteDevice,
+    mutationFn: ({ id, force }: { id: string; force?: boolean }) => deleteDevice(id, force ? { force } : undefined),
     retry: retryWithBackoff,
     retryDelay,
     onSuccess: () => {

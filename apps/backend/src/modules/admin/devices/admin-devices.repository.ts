@@ -237,13 +237,15 @@ export class AdminDevicesRepository {
   }
 
   /**
-   * Delete a device
+   * Delete a device and all associated loan history
+   * @param id Device ID
+   * @param options.force If true, allows deletion of ON_LOAN devices
    * @throws {NotFoundException} If device not found (404)
-   * @throws {ConflictException} If device is ON_LOAN (409)
+   * @throws {ConflictException} If device is ON_LOAN and force=false (409)
    * @throws {HttpException} On other database errors (500)
    */
-  async delete(id: string): Promise<void> {
-    this.logger.debug(`Deleting device: id=${id}`);
+  async delete(id: string, options?: { force?: boolean }): Promise<void> {
+    this.logger.debug(`Deleting device: id=${id}, force=${options?.force ?? false}`);
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -255,12 +257,29 @@ export class AdminDevicesRepository {
           throw new NotFoundException('Gerät nicht gefunden');
         }
 
-        if (device.status === 'ON_LOAN') {
+        if (device.status === 'ON_LOAN' && !options?.force) {
           this.logger.warn(
             `Attempt to delete device with ON_LOAN status: id=${id}`,
           );
           throw new ConflictException(
             'Gerät kann nicht gelöscht werden, da es ausgeliehen ist',
+          );
+        }
+
+        // Log force-delete of ON_LOAN device
+        if (device.status === 'ON_LOAN' && options?.force) {
+          this.logger.warn(
+            `Force-deleting ON_LOAN device: id=${id} - associated loans will be deleted`,
+          );
+        }
+
+        // Delete all loan history for this device first
+        const deletedLoans = await tx.loan.deleteMany({
+          where: { deviceId: id },
+        });
+        if (deletedLoans.count > 0) {
+          this.logger.debug(
+            `Deleted ${deletedLoans.count} loan records for device: id=${id}`,
           );
         }
 
