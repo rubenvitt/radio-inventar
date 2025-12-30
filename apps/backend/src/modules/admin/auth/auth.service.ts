@@ -80,8 +80,6 @@ export class AuthService {
   }
 
   async createSession(request: Request, user: { id: string; username: string }): Promise<void> {
-    this.logger.log('Creating session for user: ' + user.username);
-
     // Session fixation prevention: regenerate session ID after login
     // This prevents attackers from using a pre-set session ID
     // FIX H3: Explicit error handling for session regeneration
@@ -94,15 +92,11 @@ export class AuthService {
       'Session konnte nicht erstellt werden',
     );
 
-    this.logger.log('Session regenerated, setting data...');
-
     // Only set session data after successful regeneration
     // This ensures session state is consistent - either fully created or error thrown
     request.session.userId = user.id;
     request.session.username = user.username;
     request.session.isAdmin = true;
-
-    this.logger.log('Session data set, saving...');
 
     // Explicitly save session to ensure cookie is set in response
     await wrapSessionCallback(
@@ -110,8 +104,6 @@ export class AuthService {
       this.logger,
       'Session konnte nicht gespeichert werden',
     );
-
-    this.logger.log('Session saved successfully');
   }
 
   async destroySession(request: Request): Promise<void> {

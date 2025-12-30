@@ -23,6 +23,11 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT') || 3000;
 
+    // Trust proxy - required when behind reverse proxy (Cloudflare, nginx, etc.)
+    // This allows express-session to correctly detect HTTPS and set secure cookies
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.set('trust proxy', 1);
+
     // Security: Enable Helmet for security headers
     // [AI-Review Fix] CRITICAL: Added CSP headers for defense-in-depth
     app.use(helmet({
