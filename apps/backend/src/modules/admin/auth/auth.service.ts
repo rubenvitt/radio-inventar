@@ -97,6 +97,13 @@ export class AuthService {
     request.session.userId = user.id;
     request.session.username = user.username;
     request.session.isAdmin = true;
+
+    // Explicitly save session to ensure cookie is set in response
+    await wrapSessionCallback(
+      (cb) => request.session.save(cb),
+      this.logger,
+      'Session konnte nicht gespeichert werden',
+    );
   }
 
   async destroySession(request: Request): Promise<void> {
