@@ -9,14 +9,37 @@ import { AUTH_CONFIG } from '@radio-inventar/shared';
 export const getSessionCookieOptions = (): {
   httpOnly: boolean;
   secure: boolean;
-  sameSite: 'strict';
+  sameSite: 'strict' | 'lax' | 'none';
   path: string;
-} => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
-  path: '/',
-});
+  domain?: string;
+} => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  // Cross-origin requires SameSite=None and Secure=true
+  // Extract domain from PUBLIC_APP_URL for cookie sharing across subdomains
+  const publicUrl = process.env.PUBLIC_APP_URL;
+  let cookieDomain: string | undefined;
+
+  if (isProduction && publicUrl) {
+    try {
+      const url = new URL(publicUrl);
+      // Set domain to parent domain (e.g., .iuk-ue.de) for subdomain cookie sharing
+      const parts = url.hostname.split('.');
+      if (parts.length >= 2) {
+        cookieDomain = '.' + parts.slice(-2).join('.');
+      }
+    } catch {
+      // Invalid URL, skip domain setting
+    }
+  }
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'strict',
+    path: '/',
+    ...(cookieDomain && { domain: cookieDomain }),
+  };
+};
 
 /**
  * Session configuration for express-session.
