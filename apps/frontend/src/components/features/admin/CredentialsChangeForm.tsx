@@ -58,10 +58,10 @@ const CredentialsFormSchema = z.object({
 });
 
 interface FieldErrors {
-  currentPassword?: string;
-  newUsername?: string;
-  newPassword?: string;
-  confirmPassword?: string;
+  currentPassword?: string | undefined;
+  newUsername?: string | undefined;
+  newPassword?: string | undefined;
+  confirmPassword?: string | undefined;
 }
 
 /**
