@@ -5,6 +5,10 @@ export const AUTH_ERROR_MESSAGES = Object.freeze({
   SESSION_REQUIRED: 'Authentifizierung erforderlich',
   TOO_MANY_ATTEMPTS: 'Zu viele Login-Versuche. Bitte später erneut versuchen.',
   NETWORK_ERROR: 'Verbindungsfehler. Bitte später erneut versuchen.',
+  CURRENT_PASSWORD_WRONG: 'Das aktuelle Passwort ist falsch',
+  USERNAME_TAKEN: 'Dieser Benutzername ist bereits vergeben',
+  CREDENTIALS_UPDATED: 'Zugangsdaten erfolgreich aktualisiert',
+  NO_CHANGES: 'Mindestens neuer Benutzername oder neues Passwort muss angegeben werden',
 } as const);
 
 export const AUTH_CONFIG = Object.freeze({

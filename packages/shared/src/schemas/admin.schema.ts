@@ -114,3 +114,39 @@ export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
 export type HistoryFilters = z.infer<typeof HistoryFiltersSchema>;
 export type HistoryItem = z.infer<typeof HistoryItemSchema>;
 export type HistoryResponse = z.infer<typeof HistoryResponseSchema>;
+
+// ================================================================================
+// Admin Credentials Change Schemas
+// ================================================================================
+
+/**
+ * Schema for changing admin credentials (username and/or password)
+ * Requires current password for security verification
+ */
+export const ChangeCredentialsSchema = z.object({
+  currentPassword: z.string()
+    .min(1, 'Aktuelles Passwort ist erforderlich')
+    .max(ADMIN_FIELD_LIMITS.PASSWORD_MAX),
+  newUsername: z.string()
+    .trim()
+    .min(ADMIN_FIELD_LIMITS.USERNAME_MIN, `Benutzername muss mindestens ${ADMIN_FIELD_LIMITS.USERNAME_MIN} Zeichen haben`)
+    .max(ADMIN_FIELD_LIMITS.USERNAME_MAX, `Benutzername darf maximal ${ADMIN_FIELD_LIMITS.USERNAME_MAX} Zeichen haben`)
+    .optional(),
+  newPassword: z.string()
+    .min(ADMIN_FIELD_LIMITS.PASSWORD_MIN, `Passwort muss mindestens ${ADMIN_FIELD_LIMITS.PASSWORD_MIN} Zeichen haben`)
+    .max(ADMIN_FIELD_LIMITS.PASSWORD_MAX, `Passwort darf maximal ${ADMIN_FIELD_LIMITS.PASSWORD_MAX} Zeichen haben`)
+    .optional(),
+}).refine(data => data.newUsername || data.newPassword, {
+  message: 'Mindestens neuer Benutzername oder neues Passwort muss angegeben werden',
+});
+
+/**
+ * Response schema for credential change
+ */
+export const ChangeCredentialsResponseSchema = z.object({
+  message: z.string(),
+  username: z.string(),
+});
+
+export type ChangeCredentials = z.infer<typeof ChangeCredentialsSchema>;
+export type ChangeCredentialsResponse = z.infer<typeof ChangeCredentialsResponseSchema>;

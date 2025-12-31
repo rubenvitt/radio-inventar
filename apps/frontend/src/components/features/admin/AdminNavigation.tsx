@@ -1,7 +1,7 @@
 // apps/frontend/src/components/features/admin/AdminNavigation.tsx
 // Admin navigation header with links to Dashboard, Devices, History and Logout
 import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Radio, History, LogOut } from 'lucide-react';
+import { LayoutDashboard, Radio, History, Settings, LogOut } from 'lucide-react';
 import { useLogout } from '@/api/auth';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/admin/devices', label: 'Geräte', icon: Radio, exact: false },
   { to: '/admin/history', label: 'Historie', icon: History, exact: false },
+  { to: '/admin/settings', label: 'Einstellungen', icon: Settings, exact: false },
 ] as const;
 
 /**

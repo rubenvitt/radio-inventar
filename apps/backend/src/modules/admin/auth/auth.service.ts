@@ -1,9 +1,10 @@
-import { Injectable, Logger, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, InternalServerErrorException, BadRequestException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
 import { AuthRepository } from './auth.repository';
 import { SessionResponseDto } from './dto/session-response.dto';
-import { AUTH_ERROR_MESSAGES } from '@radio-inventar/shared';
+import { ChangeCredentialsResponseDto } from './dto/change-credentials-response.dto';
+import { AUTH_ERROR_MESSAGES, AUTH_CONFIG } from '@radio-inventar/shared';
 
 // Dummy hash for timing-attack prevention when user not found
 // Generated with bcrypt.hash('dummy', 12) - same cost factor as real passwords
@@ -122,6 +123,82 @@ export class AuthService {
     return {
       username: request.session.username || '',
       isValid: true,
+    };
+  }
+
+  async changeCredentials(
+    request: Request,
+    currentPassword: string,
+    newUsername?: string,
+    newPassword?: string,
+  ): Promise<ChangeCredentialsResponseDto> {
+    const userId = request.session?.userId;
+    if (!userId) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.SESSION_EXPIRED);
+    }
+
+    // Validate that at least one change is requested
+    if (!newUsername && !newPassword) {
+      throw new BadRequestException(AUTH_ERROR_MESSAGES.NO_CHANGES);
+    }
+
+    // Fetch current admin user
+    const admin = await this.authRepository.findById(userId);
+    if (!admin) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.SESSION_EXPIRED);
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.passwordHash);
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.CURRENT_PASSWORD_WRONG);
+    }
+
+    // Check if new username is already taken (if username is being changed)
+    if (newUsername && newUsername !== admin.username) {
+      const isTaken = await this.authRepository.isUsernameTaken(newUsername, userId);
+      if (isTaken) {
+        throw new ConflictException(AUTH_ERROR_MESSAGES.USERNAME_TAKEN);
+      }
+    }
+
+    // Prepare update data
+    const updateData: { username?: string; passwordHash?: string } = {};
+
+    if (newUsername && newUsername !== admin.username) {
+      updateData.username = newUsername;
+    }
+
+    if (newPassword) {
+      updateData.passwordHash = await bcrypt.hash(newPassword, AUTH_CONFIG.BCRYPT_ROUNDS);
+    }
+
+    // Only update if there are actual changes
+    if (Object.keys(updateData).length === 0) {
+      return {
+        message: AUTH_ERROR_MESSAGES.CREDENTIALS_UPDATED,
+        username: admin.username,
+      };
+    }
+
+    // Update credentials
+    const updatedAdmin = await this.authRepository.updateCredentials(userId, updateData);
+
+    // Update session with new username if it changed
+    if (updateData.username) {
+      request.session.username = updatedAdmin.username;
+      await wrapSessionCallback(
+        (cb) => request.session.save(cb),
+        this.logger,
+        'Session konnte nicht gespeichert werden',
+      );
+    }
+
+    this.logger.log(`Admin credentials updated for user ${updatedAdmin.username}`);
+
+    return {
+      message: AUTH_ERROR_MESSAGES.CREDENTIALS_UPDATED,
+      username: updatedAdmin.username,
     };
   }
 }
