@@ -4,6 +4,7 @@
  */
 
 import { ApiError } from './client';
+import { tokenStorage } from '@/lib/tokenStorage';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -54,8 +55,16 @@ export async function downloadPrintTemplate(): Promise<Blob> {
   const timeoutId = setTimeout(() => controller.abort(), PDF_TIMEOUT_MS);
 
   try {
+    // Build headers with API token for dual auth (API token + session)
+    const headers: HeadersInit = {};
+    const token = tokenStorage.get();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/admin/devices/print-template`, {
       method: 'GET',
+      headers,
       credentials: 'include', // Required for session cookies
       signal: controller.signal,
     });
