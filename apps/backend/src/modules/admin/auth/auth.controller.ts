@@ -1,10 +1,12 @@
-import { Controller, Post, Get, Body, Req, Res, Logger, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, Req, Res, Logger, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, ApiBody } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
+import { ChangeCredentialsDto } from './dto/change-credentials.dto';
+import { ChangeCredentialsResponseDto } from './dto/change-credentials-response.dto';
 import { Public } from '../../../common/decorators';
 import { AUTH_ERROR_MESSAGES, AUTH_CONFIG } from '@radio-inventar/shared';
 import { getSessionCookieOptions } from '../../../config/session.config';
@@ -19,7 +21,7 @@ function isTestEnvironment(): boolean {
 
 @ApiTags('admin/auth')
 // FIX M9: Include LoginDto in @ApiExtraModels for proper Swagger documentation
-@ApiExtraModels(SessionResponseDto, LoginDto)
+@ApiExtraModels(SessionResponseDto, LoginDto, ChangeCredentialsDto, ChangeCredentialsResponseDto)
 @Controller('admin/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -89,5 +91,26 @@ export class AuthController {
   getSession(@Req() req: Request): SessionResponseDto {
     this.logger.log('GET /api/admin/auth/session');
     return this.authService.getSessionInfo(req);
+  }
+
+  @Put('credentials')
+  // Rate limit credential changes to prevent brute force attacks
+  @Throttle({ default: { limit: isTestEnvironment() ? AUTH_CONFIG.RATE_LIMIT_TEST_ATTEMPTS : AUTH_CONFIG.RATE_LIMIT_ATTEMPTS, ttl: AUTH_CONFIG.RATE_LIMIT_TTL_MS } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Admin-Zugangsdaten ändern' })
+  @ApiBody({ type: ChangeCredentialsDto })
+  @ApiResponse({ status: 200, description: 'Zugangsdaten erfolgreich geändert', type: ChangeCredentialsResponseDto })
+  @ApiResponse({ status: 400, description: 'Ungültige Eingabedaten' })
+  @ApiResponse({ status: 401, description: 'Aktuelles Passwort falsch oder nicht authentifiziert' })
+  @ApiResponse({ status: 409, description: 'Benutzername bereits vergeben' })
+  @ApiResponse({ status: 429, description: 'Zu viele Versuche' })
+  async changeCredentials(@Body() dto: ChangeCredentialsDto, @Req() req: Request): Promise<ChangeCredentialsResponseDto> {
+    this.logger.log('PUT /api/admin/auth/credentials');
+    return this.authService.changeCredentials(
+      req,
+      dto.currentPassword,
+      dto.newUsername,
+      dto.newPassword,
+    );
   }
 }

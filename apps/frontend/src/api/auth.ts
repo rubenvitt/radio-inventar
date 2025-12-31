@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   SessionDataSchema,
   LogoutResponseSchema,
+  ChangeCredentialsResponseSchema,
   AUTH_ERROR_MESSAGES,
   ADMIN_FIELD_LIMITS
 } from '@radio-inventar/shared';
@@ -21,6 +22,19 @@ interface LoginResponse {
 /** Response type for logout endpoint */
 interface LogoutResponse {
   message: string;
+}
+
+/** Response type for change credentials endpoint */
+interface ChangeCredentialsResponse {
+  message: string;
+  username: string;
+}
+
+/** Input type for change credentials */
+interface ChangeCredentialsInput {
+  currentPassword: string;
+  newUsername?: string;
+  newPassword?: string;
 }
 
 /**
@@ -207,6 +221,89 @@ export function useLogout() {
     onError: () => {
       // Even on error, redirect to login to clear UI state
       navigate({ to: '/admin/login' });
+    },
+    retry: false,
+  });
+}
+
+// === Credential Change Functions ===
+
+/**
+ * Maps credential change API errors to user-friendly German messages
+ */
+function getCredentialChangeErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 401:
+        return AUTH_ERROR_MESSAGES.CURRENT_PASSWORD_WRONG;
+      case 409:
+        return AUTH_ERROR_MESSAGES.USERNAME_TAKEN;
+      case 429:
+        return AUTH_ERROR_MESSAGES.TOO_MANY_ATTEMPTS;
+      default:
+        if (error.status >= 500) {
+          return AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+        }
+        return AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+    }
+  }
+  if (error instanceof TimeoutError) {
+    return AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+  }
+  return AUTH_ERROR_MESSAGES.NETWORK_ERROR;
+}
+
+/** Validation schema for credential change input */
+const ChangeCredentialsInputSchema = z.object({
+  currentPassword: z.string().min(1).max(ADMIN_FIELD_LIMITS.PASSWORD_MAX),
+  newUsername: z.string().min(ADMIN_FIELD_LIMITS.USERNAME_MIN).max(ADMIN_FIELD_LIMITS.USERNAME_MAX).optional(),
+  newPassword: z.string().min(ADMIN_FIELD_LIMITS.PASSWORD_MIN).max(ADMIN_FIELD_LIMITS.PASSWORD_MAX).optional(),
+});
+
+/**
+ * Change admin credentials (username and/or password)
+ * PUT /api/admin/auth/credentials
+ */
+export async function changeCredentials(input: ChangeCredentialsInput): Promise<ChangeCredentialsResponse> {
+  // Validate inputs before sending to API
+  const inputValidation = ChangeCredentialsInputSchema.safeParse(input);
+  if (!inputValidation.success) {
+    throw new Error('Invalid input format');
+  }
+
+  try {
+    const response = await apiClient.put<unknown>('/api/admin/auth/credentials', input);
+
+    // Validate response with Zod (security requirement)
+    const validated = ChangeCredentialsResponseSchema.safeParse((response as any).data);
+    if (!validated.success) {
+      throw new Error('Invalid response format');
+    }
+
+    return validated.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const message = getCredentialChangeErrorMessage(error);
+      throw new ApiError(error.status, error.statusText, message);
+    }
+    throw new Error(getCredentialChangeErrorMessage(error));
+  }
+}
+
+/**
+ * Hook for changing credentials mutation
+ */
+export function useChangeCredentials() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: changeCredentials,
+    onSuccess: (data) => {
+      // Update session data with new username
+      queryClient.setQueryData(authKeys.session(), {
+        username: data.username,
+        isValid: true,
+      });
     },
     retry: false,
   });
