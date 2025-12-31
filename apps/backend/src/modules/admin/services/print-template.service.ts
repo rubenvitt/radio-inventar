@@ -186,6 +186,22 @@ export class PrintTemplateService {
       width: HEADER.QR_SIZE,
       height: HEADER.QR_SIZE,
     });
+
+    // Hint text next to QR code
+    const hintX = qrX - 130; // Position left of QR code
+    const hintWidth = 125;
+    doc
+      .font('Helvetica')
+      .fontSize(8)
+      .text(
+        'Bitte bevorzugt über den QR-Code ausleihen!',
+        hintX,
+        qrY + 10,
+        {
+          width: hintWidth,
+          align: 'right',
+        },
+      );
   }
 
   /**
