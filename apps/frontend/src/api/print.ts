@@ -1,10 +1,11 @@
 /**
  * Public Print Template API
  * Handles PDF generation and download for device list print template
- * Available without authentication for convenience
+ * Requires API token but no session authentication
  */
 
 import { ApiError } from './client';
+import { tokenStorage } from '@/lib/tokenStorage';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -48,9 +49,16 @@ export async function downloadPublicPrintTemplate(): Promise<Blob> {
   const timeoutId = setTimeout(() => controller.abort(), PDF_TIMEOUT_MS);
 
   try {
+    // Build headers with API token
+    const headers: HeadersInit = {};
+    const token = tokenStorage.get();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/devices/print-template`, {
       method: 'GET',
-      // No credentials required - public endpoint
+      headers,
       signal: controller.signal,
     });
 
