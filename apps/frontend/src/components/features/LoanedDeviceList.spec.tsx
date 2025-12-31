@@ -106,7 +106,7 @@ describe('LoanedDeviceList', () => {
         <LoanedDeviceList loans={[]} isLoading={false} error={null} />
       );
 
-      expect(screen.getByText(/Keine Geraete ausgeliehen/i)).toBeInTheDocument();
+      expect(screen.getByText(/Keine Geräte ausgeliehen/i)).toBeInTheDocument();
     });
 
     it('has correct aria-label for empty state', () => {
@@ -115,7 +115,7 @@ describe('LoanedDeviceList', () => {
       );
 
       expect(
-        screen.getByRole('status', { name: /Keine Geraete ausgeliehen/i })
+        screen.getByRole('status', { name: /Keine Geräte ausgeliehen/i })
       ).toBeInTheDocument();
     });
 
@@ -145,7 +145,7 @@ describe('LoanedDeviceList', () => {
       );
 
       expect(
-        screen.getByRole('list', { name: /Ausgeliehene Geraete/i })
+        screen.getByRole('list', { name: /Ausgeliehene Geräte/i })
       ).toBeInTheDocument();
     });
 
@@ -220,7 +220,7 @@ describe('LoanedDeviceList', () => {
       );
 
       expect(screen.getByText(/Fehler/i)).toBeInTheDocument();
-      expect(screen.queryByText(/Keine Geraete ausgeliehen/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Keine Geräte ausgeliehen/i)).not.toBeInTheDocument();
     });
   });
 });

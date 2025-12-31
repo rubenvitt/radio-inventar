@@ -19,7 +19,7 @@ interface LoanedDeviceListProps {
  *
  * Features:
  * - Reuses LoadingState and ErrorState components for consistency
- * - Empty state message: "Keine Geraete ausgeliehen" (AC#3)
+ * - Empty state message: "Keine Geräte ausgeliehen" (AC#3)
  * - Grid layout for device cards
  * - Touch-optimized spacing
  * - memo() wrapped to prevent unnecessary re-renders
@@ -56,16 +56,16 @@ export const LoanedDeviceList = memo(function LoanedDeviceList({
       <div
         className="flex items-center justify-center min-h-[200px] text-muted-foreground"
         role="status"
-        aria-label="Keine Geraete ausgeliehen"
+        aria-label="Keine Geräte ausgeliehen"
       >
-        <p className="text-center">Keine Geraete ausgeliehen</p>
+        <p className="text-center">Keine Geräte ausgeliehen</p>
       </div>
     );
   }
 
   // Filled State
   return (
-    <div className="grid gap-3" role="list" aria-label="Ausgeliehene Geraete">
+    <div className="grid gap-3" role="list" aria-label="Ausgeliehene Geräte">
       {loans.map((loan) => (
         <div key={loan.id} role="listitem">
           {onLoanClick ? (

@@ -230,7 +230,7 @@ export function BorrowerInput({
         <div
           id={listboxId}
           role="listbox"
-          aria-label="Namensvorschlaege"
+          aria-label="Namensvorschläge"
           className={cn(
             'absolute z-50 w-full mt-1',
             'max-h-[300px] overflow-y-auto',
@@ -241,7 +241,7 @@ export function BorrowerInput({
           {isLoading && (
             <div className="p-4 flex items-center justify-center" role="status">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
-              <span className="sr-only">Vorschlaege werden geladen...</span>
+              <span className="sr-only">Vorschläge werden geladen...</span>
             </div>
           )}
 
@@ -264,7 +264,7 @@ export function BorrowerInput({
           {/* Empty State */}
           {!isLoading && !error && suggestions.length === 0 && (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              Keine Vorschlaege gefunden
+              Keine Vorschläge gefunden
             </div>
           )}
 
@@ -303,8 +303,8 @@ export function BorrowerInput({
       {shouldShowSuggestions && !isLoading && !error && (
         <div aria-live="polite" className="sr-only">
           {suggestions.length === 0
-            ? 'Keine Vorschlaege gefunden'
-            : `${suggestions.length} Vorschlaege verfuegbar`}
+            ? 'Keine Vorschläge gefunden'
+            : `${suggestions.length} Vorschläge verfügbar`}
         </div>
       )}
     </div>
