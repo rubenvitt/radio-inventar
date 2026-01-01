@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="#1e40af"/>
+  <g fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Radio body -->
+    <rect x="8" y="12" width="16" height="12" rx="2" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- Antenna -->
+    <line x1="12" y1="12" x2="9" y2="7"/>
+    <circle cx="9" cy="6" r="1.5" fill="#ffffff"/>
+    <!-- Speaker lines -->
+    <line x1="11" y1="16" x2="15" y2="16"/>
+    <line x1="11" y1="19" x2="15" y2="19"/>
+    <!-- Dial -->
+    <circle cx="20" cy="18" r="2" fill="#ffffff" fill-opacity="0.3"/>
+  </g>
+</svg>

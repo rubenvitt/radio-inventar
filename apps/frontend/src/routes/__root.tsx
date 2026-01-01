@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet, redirect, useLocation } from '@tanstack/react-router'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Navigation } from '@/components/features/Navigation'
+import { PWAInstallBanner, PWAUpdateNotification, PWAOfflineIndicator } from '@/components/pwa'
 import { queryClient } from '@/lib/queryClient'
 import { checkSetupStatus } from '@/api/setup'
 import { setupKeys } from '@/lib/queryKeys'
@@ -36,11 +37,14 @@ function RootComponent() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="radio-inventar-theme">
       <div className="min-h-screen bg-background text-foreground">
+        <PWAOfflineIndicator />
         <main className={hideNavigation ? '' : 'pb-20'}>
           <Outlet />
         </main>
         {/* Hide navigation on setup and token-setup pages */}
         {!hideNavigation && <Navigation />}
+        <PWAInstallBanner />
+        <PWAUpdateNotification />
       </div>
     </ThemeProvider>
   )
