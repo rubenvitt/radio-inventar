@@ -89,9 +89,11 @@ export class PrintTemplateService {
       throw new Error('API_TOKEN not configured');
     }
 
-    // Append token as query parameter for auto-authentication
+    // Append base64-encoded token as query parameter for auto-authentication
+    // Must match frontend encoding (btoa) for consistent QR code handling
     const url = new URL(appUrl);
-    url.searchParams.set('token', apiToken);
+    const encodedToken = Buffer.from(apiToken).toString('base64');
+    url.searchParams.set('token', encodedToken);
     return url.toString();
   }
 
