@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Radio, RotateCcw, LayoutGrid } from 'lucide-react'
+import { Radio, RotateCcw, LayoutGrid, QrCode } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 import { cn } from '@/lib/utils'
 
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/loan', label: 'Ausleihen', icon: Radio },
   { to: '/return', label: 'Zurückgeben', icon: RotateCcw },
   { to: '/', label: 'Übersicht', icon: LayoutGrid },
+  { to: '/qr-code', label: 'QR-Code', icon: QrCode },
 ] as const
 
 export function Navigation() {

@@ -12,14 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokenSetupRouteImport } from './routes/token-setup'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ReturnRouteImport } from './routes/return'
+import { Route as QrCodeRouteImport } from './routes/qr-code'
 import { Route as LoanRouteImport } from './routes/loan'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminHistoryRouteImport } from './routes/admin/history'
 import { Route as AdminDevicesRouteImport } from './routes/admin/devices'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 
 const TokenSetupRoute = TokenSetupRouteImport.update({
   id: '/token-setup',
@@ -34,6 +35,11 @@ const SetupRoute = SetupRouteImport.update({
 const ReturnRoute = ReturnRouteImport.update({
   id: '/return',
   path: '/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QrCodeRoute = QrCodeRouteImport.update({
+  id: '/qr-code',
+  path: '/qr-code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoanRoute = LoanRouteImport.update({
@@ -56,6 +62,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -71,16 +82,12 @@ const AdminDevicesRoute = AdminDevicesRouteImport.update({
   path: '/devices',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AdminRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/loan': typeof LoanRoute
+  '/qr-code': typeof QrCodeRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
   '/token-setup': typeof TokenSetupRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/loan': typeof LoanRoute
+  '/qr-code': typeof QrCodeRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
   '/token-setup': typeof TokenSetupRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/loan': typeof LoanRoute
+  '/qr-code': typeof QrCodeRoute
   '/return': typeof ReturnRoute
   '/setup': typeof SetupRoute
   '/token-setup': typeof TokenSetupRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/loan'
+    | '/qr-code'
     | '/return'
     | '/setup'
     | '/token-setup'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/loan'
+    | '/qr-code'
     | '/return'
     | '/setup'
     | '/token-setup'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/loan'
+    | '/qr-code'
     | '/return'
     | '/setup'
     | '/token-setup'
@@ -161,6 +173,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoanRoute: typeof LoanRoute
+  QrCodeRoute: typeof QrCodeRoute
   ReturnRoute: typeof ReturnRoute
   SetupRoute: typeof SetupRoute
   TokenSetupRoute: typeof TokenSetupRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/return'
       fullPath: '/return'
       preLoaderRoute: typeof ReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qr-code': {
+      id: '/qr-code'
+      path: '/qr-code'
+      fullPath: '/qr-code'
+      preLoaderRoute: typeof QrCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loan': {
@@ -217,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
@@ -236,13 +263,6 @@ declare module '@tanstack/react-router' {
       path: '/devices'
       fullPath: '/admin/devices'
       preLoaderRoute: typeof AdminDevicesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
   }
@@ -270,6 +290,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoanRoute: LoanRoute,
+  QrCodeRoute: QrCodeRoute,
   ReturnRoute: ReturnRoute,
   SetupRoute: SetupRoute,
   TokenSetupRoute: TokenSetupRoute,
