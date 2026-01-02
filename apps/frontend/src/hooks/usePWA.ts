@@ -68,39 +68,44 @@ export function usePWA(): PWAState & PWAActions {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    // Register service worker and listen for updates
+    // Register service worker manually
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
-        setRegistration(reg)
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          setRegistration(reg)
 
-        // Check for updates periodically
-        const checkForUpdates = () => {
-          reg.update().catch(() => {
-            // Silently fail if offline
-          })
-        }
-
-        // Check every 60 seconds when online
-        const interval = setInterval(() => {
-          if (navigator.onLine) {
-            checkForUpdates()
-          }
-        }, 60000)
-
-        // Listen for new service worker
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setState(prev => ({ ...prev, isUpdateAvailable: true }))
-              }
+          // Check for updates periodically
+          const checkForUpdates = () => {
+            reg.update().catch(() => {
+              // Silently fail if offline
             })
           }
-        })
 
-        return () => clearInterval(interval)
-      })
+          // Check every 60 seconds when online
+          const interval = setInterval(() => {
+            if (navigator.onLine) {
+              checkForUpdates()
+            }
+          }, 60000)
+
+          // Listen for new service worker
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  setState(prev => ({ ...prev, isUpdateAvailable: true }))
+                }
+              })
+            }
+          })
+
+          // Cleanup interval on unmount
+          return () => clearInterval(interval)
+        })
+        .catch((error) => {
+          console.warn('Service worker registration failed:', error)
+        })
     }
 
     return () => {
