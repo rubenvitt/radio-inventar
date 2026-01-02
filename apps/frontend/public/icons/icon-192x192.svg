@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="24" fill="#1e40af"/>
+  <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Radio body -->
+    <rect x="48" y="72" width="96" height="72" rx="8" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- Antenna -->
+    <line x1="72" y1="72" x2="56" y2="40"/>
+    <circle cx="56" cy="36" r="6" fill="#ffffff"/>
+    <!-- Speaker grille -->
+    <line x1="64" y1="96" x2="88" y2="96"/>
+    <line x1="64" y1="108" x2="88" y2="108"/>
+    <line x1="64" y1="120" x2="88" y2="120"/>
+    <!-- Display/dial -->
+    <rect x="104" y="88" width="28" height="20" rx="4" fill="#ffffff" fill-opacity="0.3"/>
+    <!-- Knob -->
+    <circle cx="118" cy="124" r="10" fill="#ffffff" fill-opacity="0.2"/>
+    <circle cx="118" cy="124" r="4" fill="#ffffff"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background fills entire area for maskable icons -->
+  <rect width="512" height="512" fill="#1e40af"/>
+  <!-- Content in safe zone (inner 80%) -->
+  <g transform="translate(51.2, 51.2) scale(0.8)" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Radio body -->
+    <rect x="128" y="192" width="256" height="192" rx="20" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- Antenna -->
+    <line x1="192" y1="192" x2="150" y2="108"/>
+    <circle cx="150" cy="96" r="16" fill="#ffffff"/>
+    <!-- Speaker grille -->
+    <line x1="172" y1="256" x2="236" y2="256"/>
+    <line x1="172" y1="288" x2="236" y2="288"/>
+    <line x1="172" y1="320" x2="236" y2="320"/>
+    <!-- Display/dial -->
+    <rect x="276" y="236" width="76" height="52" rx="10" fill="#ffffff" fill-opacity="0.3"/>
+    <!-- Knob -->
+    <circle cx="314" cy="332" r="28" fill="#ffffff" fill-opacity="0.2"/>
+    <circle cx="314" cy="332" r="12" fill="#ffffff"/>
+  </g>
+</svg>
