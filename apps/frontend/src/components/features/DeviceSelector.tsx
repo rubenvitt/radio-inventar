@@ -5,11 +5,11 @@ import { SelectableDeviceCard } from './SelectableDeviceCard'
 import { DeviceStatusEnum } from '@radio-inventar/shared'
 
 interface DeviceSelectorProps {
-  selectedDeviceId: string | null
+  selectedDeviceIds: string[]
   onSelect: (deviceId: string) => void
 }
 
-export function DeviceSelector({ selectedDeviceId, onSelect }: DeviceSelectorProps) {
+export function DeviceSelector({ selectedDeviceIds, onSelect }: DeviceSelectorProps) {
   const { data: devices, isLoading, error, refetch } = useDevices()
 
   if (isLoading) return <LoadingState />
@@ -42,7 +42,7 @@ export function DeviceSelector({ selectedDeviceId, onSelect }: DeviceSelectorPro
           key={device.id}
           device={device}
           deviceId={device.id}
-          isSelected={selectedDeviceId === device.id}
+          isSelected={selectedDeviceIds.includes(device.id)}
           isSelectable={device.status === DeviceStatusEnum.enum.AVAILABLE}
           onSelect={onSelect}
         />

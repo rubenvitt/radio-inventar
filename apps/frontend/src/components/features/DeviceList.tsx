@@ -24,7 +24,7 @@ export function DeviceList() {
 
   // Navigate to loan page when a device is selected for borrowing
   const handleDeviceSelect = useCallback((deviceId: string) => {
-    navigate({ to: '/loan', search: { deviceId } });
+    navigate({ to: '/loan', search: { deviceIds: [deviceId] } });
   }, [navigate]);
 
   // Handler with error handling for refresh button
