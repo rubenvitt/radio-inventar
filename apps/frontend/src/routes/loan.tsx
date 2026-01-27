@@ -10,7 +10,7 @@ import { z } from 'zod'
 
 // Validate search params
 const loanSearchSchema = z.object({
-  deviceId: z.string().optional(),
+  deviceIds: z.union([z.string(), z.array(z.string())]).optional(),
 })
 
 export const Route = createFileRoute('/loan')({
@@ -22,24 +22,39 @@ function LoanPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const search = Route.useSearch()
 
-  // State for borrower name - deviceId comes from URL
+  // Normalize deviceIds to array
+  const rawDeviceIds = search.deviceIds
+  const selectedDeviceIds = Array.isArray(rawDeviceIds)
+    ? rawDeviceIds
+    : rawDeviceIds
+      ? [rawDeviceIds]
+      : []
+
+  // State for borrower name
   const [borrowerName, setBorrowerName] = useState('')
-  const selectedDeviceId = search.deviceId ?? null
 
   const handleDeviceSelect = useCallback((deviceId: string) => {
+    const newIds = selectedDeviceIds.includes(deviceId)
+      ? selectedDeviceIds.filter(id => id !== deviceId)
+      : [...selectedDeviceIds, deviceId]
+
     navigate({
-      search: { deviceId },
+      search: { deviceIds: newIds },
       replace: true,
     })
-  }, [navigate])
+  }, [navigate, selectedDeviceIds])
 
   const handleSuccess = useCallback(() => {
-    toast.success('Gerät erfolgreich ausgeliehen')
+    toast.success(
+      selectedDeviceIds.length > 1
+        ? 'Geräte erfolgreich ausgeliehen'
+        : 'Gerät erfolgreich ausgeliehen'
+    )
     // Reset state and navigate back to device list or stay? 
     // Usually stay or clear selection. Let's clear selection.
     setBorrowerName('')
     navigate({ to: '/' })
-  }, [navigate])
+  }, [navigate, selectedDeviceIds.length])
 
   const handleError = useCallback((error: Error) => {
     toast.error('Ausleihe fehlgeschlagen', {
@@ -52,14 +67,14 @@ function LoanPage() {
       <div>
         <h1 className="text-2xl font-bold mb-2">Gerät ausleihen</h1>
         <p className="text-muted-foreground">
-          Wählen Sie ein Gerät und geben Sie den Namen des Empfängers ein.
+          Wählen Sie ein oder mehrere Geräte und geben Sie den Namen des Empfängers ein.
         </p>
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">1. Gerät wählen</h2>
+        <h2 className="text-lg font-semibold">1. Gerät(e) wählen</h2>
         <DeviceSelector
-          selectedDeviceId={selectedDeviceId}
+          selectedDeviceIds={selectedDeviceIds}
           onSelect={handleDeviceSelect}
         />
       </section>
@@ -69,14 +84,14 @@ function LoanPage() {
         <BorrowerInput
           value={borrowerName}
           onChange={setBorrowerName}
-          disabled={!selectedDeviceId}
+          disabled={selectedDeviceIds.length === 0}
           autoFocus={false}
         />
       </section>
 
       <div className="pt-4 border-t">
         <ConfirmLoanButton
-          deviceId={selectedDeviceId}
+          deviceIds={selectedDeviceIds}
           borrowerName={borrowerName}
           onSuccess={handleSuccess}
           onError={handleError}

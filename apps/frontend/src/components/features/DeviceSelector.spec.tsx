@@ -106,7 +106,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
 
 describe('DeviceSelector', () => {
   const defaultProps = {
-    selectedDeviceId: null,
+    selectedDeviceIds: [],
     onSelect: vi.fn(),
   }
 
@@ -251,7 +251,7 @@ describe('DeviceSelector', () => {
     }))
 
     render(
-      <DeviceSelector selectedDeviceId={null} onSelect={mockOnSelect} />
+      <DeviceSelector selectedDeviceIds={[]} onSelect={mockOnSelect} />
     )
 
     // Click on AVAILABLE device (Florian 4-21)
@@ -273,7 +273,7 @@ describe('DeviceSelector', () => {
     }))
 
     render(
-      <DeviceSelector selectedDeviceId={null} onSelect={mockOnSelect} />
+      <DeviceSelector selectedDeviceIds={[]} onSelect={mockOnSelect} />
     )
 
     // Try clicking on ON_LOAN device (Florian 4-22)
@@ -294,7 +294,7 @@ describe('DeviceSelector', () => {
     }))
 
     render(
-      <DeviceSelector selectedDeviceId="dev1" onSelect={vi.fn()} />
+      <DeviceSelector selectedDeviceIds={['dev1']} onSelect={vi.fn()} />
     )
 
     // Find the selected device card
@@ -358,7 +358,7 @@ describe('DeviceSelector', () => {
       expect(screen.queryByText('Florian 4-22')).not.toBeInTheDocument()
     })
 
-    it('updates selection when selectedDeviceId prop changes', () => {
+    it('updates selection when selectedDeviceIds prop changes', () => {
       mockUseDevices.mockReturnValue(createMockReturn({
         data: mockDevices,
         isSuccess: true,
@@ -366,7 +366,7 @@ describe('DeviceSelector', () => {
       }))
 
       const { rerender } = render(
-        <DeviceSelector selectedDeviceId={null} onSelect={vi.fn()} />
+        <DeviceSelector selectedDeviceIds={[]} onSelect={vi.fn()} />
       )
 
       // Initially no selection
@@ -375,7 +375,7 @@ describe('DeviceSelector', () => {
       expect(selectedCard).toHaveAttribute('aria-selected', 'false')
 
       // Update selection
-      rerender(<DeviceSelector selectedDeviceId="dev1" onSelect={vi.fn()} />)
+      rerender(<DeviceSelector selectedDeviceIds={['dev1']} onSelect={vi.fn()} />)
 
       selectedCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
       expect(selectedCard).toHaveClass('ring-2', 'ring-primary')
@@ -417,7 +417,7 @@ describe('DeviceSelector', () => {
       }))
 
       render(
-        <DeviceSelector selectedDeviceId="dev1" onSelect={vi.fn()} />
+        <DeviceSelector selectedDeviceIds={['dev1']} onSelect={vi.fn()} />
       )
 
       // Only dev1 should be selected
@@ -444,7 +444,7 @@ describe('DeviceSelector', () => {
         status: 'success',
       }))
 
-      render(<DeviceSelector selectedDeviceId={null} onSelect={vi.fn()} />)
+      render(<DeviceSelector selectedDeviceIds={[]} onSelect={vi.fn()} />)
 
       // Tab zum ersten wählbaren Gerät
       await user.tab()
@@ -463,7 +463,7 @@ describe('DeviceSelector', () => {
         status: 'success',
       }))
 
-      render(<DeviceSelector selectedDeviceId={null} onSelect={vi.fn()} />)
+      render(<DeviceSelector selectedDeviceIds={[]} onSelect={vi.fn()} />)
 
       await user.tab() // Erstes AVAILABLE
       await user.tab() // Sollte ON_LOAN überspringen, drittes AVAILABLE

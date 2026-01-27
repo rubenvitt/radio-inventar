@@ -1,7 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2 } from 'lucide-react';
-import { useCreateLoan, type CreateLoanResponse } from '@/api/loans';
+import { useCreateLoan } from '@/api/loans';
 import { cn } from '@/lib/utils';
 import { sanitizeForDisplay } from '@/lib/sanitize';
 
@@ -12,12 +12,12 @@ const BUTTON_TEXT = {
 } as const;
 
 interface ConfirmLoanButtonProps {
-  /** Device ID to loan (CUID2 format) */
-  deviceId: string | null;
+  /** Device IDs to loan (CUID2 format) */
+  deviceIds: string[];
   /** Name of the borrower */
   borrowerName: string;
   /** Callback when loan is successfully created */
-  onSuccess: (loan: CreateLoanResponse) => void;
+  onSuccess: () => void;
   /** Callback when loan creation fails */
   onError: (error: Error) => void;
   /** Additional CSS classes */
@@ -33,31 +33,39 @@ interface ConfirmLoanButtonProps {
  * AC#7: min-height 44px (via size="lg")
  */
 export function ConfirmLoanButton({
-  deviceId,
+  deviceIds,
   borrowerName,
   onSuccess,
   onError,
   className,
 }: ConfirmLoanButtonProps) {
-  const { mutate, isPending } = useCreateLoan();
+  const { mutateAsync } = useCreateLoan();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const trimmedName = borrowerName.trim();
-  const isDisabled = !deviceId || !trimmedName || isPending;
+  const isDisabled = deviceIds.length === 0 || !trimmedName || isSubmitting;
 
-  const handleClick = useCallback(() => {
-    if (!deviceId || !trimmedName) return;
+  const handleClick = useCallback(async () => {
+    if (deviceIds.length === 0 || !trimmedName) return;
 
+    setIsSubmitting(true);
     const sanitizedName = sanitizeForDisplay(trimmedName);
 
-    mutate(
-      { deviceId, borrowerName: sanitizedName },
-      {
-        onSuccess: (loan) => onSuccess(loan),
-        onError: (error) =>
-          onError(error instanceof Error ? error : new Error('Unbekannter Fehler')),
-      }
-    );
-  }, [deviceId, trimmedName, mutate, onSuccess, onError]);
+    try {
+      await Promise.all(
+        deviceIds.map((deviceId) =>
+          mutateAsync({ deviceId, borrowerName: sanitizedName })
+        )
+      );
+      onSuccess();
+    } catch (error) {
+      onError(error instanceof Error ? error : new Error('Unbekannter Fehler'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [deviceIds, trimmedName, mutateAsync, onSuccess, onError]);
+
+  const buttonLabel = deviceIds.length > 1 ? 'Geräte ausleihen' : BUTTON_TEXT.DEFAULT;
 
   return (
     <Button
@@ -65,9 +73,9 @@ export function ConfirmLoanButton({
       disabled={isDisabled}
       size="lg"
       className={cn('w-full gap-2', className)}
-      aria-busy={isPending}
+      aria-busy={isSubmitting}
     >
-      {isPending ? (
+      {isSubmitting ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           <span>{BUTTON_TEXT.SAVING}</span>
@@ -75,7 +83,7 @@ export function ConfirmLoanButton({
       ) : (
         <>
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-          <span>{BUTTON_TEXT.DEFAULT}</span>
+          <span>{buttonLabel}</span>
         </>
       )}
     </Button>
