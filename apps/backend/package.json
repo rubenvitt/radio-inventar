@@ -14,7 +14,7 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org rubeen --project radio-backend ./dist && sentry-cli --url https://sentry.rubeen.dev/ sourcemaps upload --org rubeen --project radio-backend ./dist"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.0",
+    "@nestjs/common": "^11.1.14",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
