@@ -8,9 +8,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./src",
+
     "paths": {
       "@/*": ["./*"]
     },
+
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -25,7 +27,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "inlineSources": true,
+
+    // Set `sourceRoot` to  "/" to strip the build path prefix
+    // from generated source code references.
+    // This improves issue grouping in Sentry.
+    "sourceRoot": "/"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]

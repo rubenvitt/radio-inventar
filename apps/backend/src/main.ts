@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -38,6 +39,7 @@ async function bootstrap() {
           styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for CSS-in-JS
           imgSrc: ["'self'", 'data:', 'blob:'],
           fontSrc: ["'self'"],
+          connectSrc: ["'self'", 'https://sentry.rubeen.dev'],
           objectSrc: ["'none'"],
           upgradeInsecureRequests: [],
           frameAncestors: ["'none'"],

@@ -8,6 +8,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SentryExceptionCaptured } from '@sentry/nestjs';
 import { Request, Response } from 'express';
 
 /**
@@ -36,6 +37,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
   constructor(private readonly configService: ConfigService) {}
 
+  @SentryExceptionCaptured()
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
