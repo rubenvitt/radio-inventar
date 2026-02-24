@@ -51,6 +51,6 @@
   },
   "_comment_peerDependencies": "TypeScript is required for BUILD (devDependency in root package.json) but optional for CONSUMPTION: (1) JS-only consumers can use Zod runtime validation without TS, (2) .d.ts files are included in dist/ for TS consumers, (3) TS version is enforced at dev time via root package.json",
   "devDependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   }
 }
