@@ -68,9 +68,13 @@ jobs:
 
       - name: Build Backend
         run: pnpm --filter @radio-inventar/backend build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Build Frontend
         run: pnpm --filter @radio-inventar/frontend build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # ============================================
   # Job 2: Docker Build & Push (only main branch)
