@@ -153,6 +153,13 @@ API_TOKEN=your-api-token-min-32-characters-long
 
 # Öffentliche URL für QR-Codes (HTTPS in Production erforderlich)
 PUBLIC_APP_URL=http://localhost:5173
+
+# Pocket ID (OIDC)
+POCKET_ID_ISSUER_URL=http://localhost:1411
+POCKET_ID_CLIENT_ID=radio-inventar
+POCKET_ID_CLIENT_SECRET=change-me
+POCKET_ID_CALLBACK_URL=http://localhost:3000/api/admin/auth/pocketid/callback
+POCKET_ID_SCOPE=openid profile email
 ```
 
 ### Frontend (.env)
@@ -183,7 +190,8 @@ VITE_API_URL=http://localhost:3000/api
 
 | Methode | Endpunkt | Beschreibung |
 |---------|----------|--------------|
-| `POST` | `/api/admin/auth/login` | Anmelden |
+| `GET` | `/api/admin/auth/pocketid/login` | Pocket ID Login starten |
+| `GET` | `/api/admin/auth/pocketid/callback` | Pocket ID Callback |
 | `POST` | `/api/admin/auth/logout` | Abmelden |
 | `GET` | `/api/admin/auth/session` | Session prüfen |
 | `GET` | `/api/admin/devices` | Geräte (Admin) |
