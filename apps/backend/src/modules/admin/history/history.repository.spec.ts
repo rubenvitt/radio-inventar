@@ -8,14 +8,22 @@ describe('HistoryRepository', () => {
   let repository: HistoryRepository;
   let prisma: {
     device: { count: jest.Mock };
-    loan: { findMany: jest.Mock; count: jest.Mock };
+    loan: {
+      findMany: jest.Mock;
+      count: jest.Mock;
+      deleteMany: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
     prisma = {
       device: { count: jest.fn() },
-      loan: { findMany: jest.fn(), count: jest.fn() },
+      loan: {
+        findMany: jest.fn(),
+        count: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       $transaction: jest.fn(),
     };
 
@@ -33,6 +41,31 @@ describe('HistoryRepository', () => {
   });
 
   describe('getDashboardStats', () => {
+    it('should delete expired history entries before fetching dashboard stats', async () => {
+      prisma.loan.deleteMany = jest.fn().mockResolvedValue({ count: 2 });
+
+      const mockTransaction = jest.fn(async (callback) => {
+        const tx = {
+          device: { count: jest.fn().mockResolvedValue(0) },
+          loan: { findMany: jest.fn().mockResolvedValue([]) },
+        };
+        return callback(tx);
+      });
+
+      prisma.$transaction = mockTransaction;
+
+      await repository.getDashboardStats();
+
+      expect(prisma.loan.deleteMany).toHaveBeenCalledWith({
+        where: {
+          returnedAt: {
+            not: null,
+            lt: expect.any(Date),
+          },
+        },
+      });
+    });
+
     it('should execute parallel COUNT queries using Promise.all', async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
@@ -298,6 +331,23 @@ describe('HistoryRepository', () => {
       }
     });
 
+    it('should ignore cleanup errors and continue fetching dashboard stats', async () => {
+      const mockTransaction = jest.fn(async (callback) => {
+        const tx = {
+          device: { count: jest.fn().mockResolvedValue(0) },
+          loan: { findMany: jest.fn().mockResolvedValue([]) },
+        };
+        return callback(tx);
+      });
+
+      prisma.loan.deleteMany = jest.fn().mockRejectedValue(new Error('Cleanup failed'));
+      prisma.$transaction = mockTransaction;
+
+      await repository.getDashboardStats();
+
+      expect(mockTransaction).toHaveBeenCalled();
+    });
+
     it('should handle multiple concurrent calls', async () => {
       prisma.$transaction = jest.fn(async (callback) => {
         const tx = {
@@ -321,6 +371,23 @@ describe('HistoryRepository', () => {
   });
 
   describe('getHistory', () => {
+    it('should delete expired returned loans before fetching history', async () => {
+      prisma.loan.deleteMany = jest.fn().mockResolvedValue({ count: 3 });
+      prisma.loan.findMany = jest.fn().mockResolvedValue([]);
+      prisma.loan.count = jest.fn().mockResolvedValue(0);
+
+      await repository.getHistory({ page: 1, pageSize: 100 });
+
+      expect(prisma.loan.deleteMany).toHaveBeenCalledWith({
+        where: {
+          returnedAt: {
+            not: null,
+            lt: expect.any(Date),
+          },
+        },
+      });
+    });
+
     it('should return all loans when no filters provided', async () => {
       const mockLoans = [
         {
@@ -588,6 +655,18 @@ describe('HistoryRepository', () => {
       } catch (error) {
         expect((error as HttpException).getStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       }
+    });
+
+    it('should ignore cleanup errors and continue fetching history', async () => {
+      prisma.loan.deleteMany = jest.fn().mockRejectedValue(new Error('Cleanup failed'));
+      prisma.loan.findMany = jest.fn().mockResolvedValue([]);
+      prisma.loan.count = jest.fn().mockResolvedValue(0);
+
+      const result = await repository.getHistory({ page: 1, pageSize: 100 });
+
+      expect(prisma.loan.findMany).toHaveBeenCalled();
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
     });
 
     it('should execute parallel data and count queries using Promise.all', async () => {

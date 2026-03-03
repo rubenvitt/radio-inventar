@@ -50,11 +50,47 @@ export interface HistoryResult {
   total: number;
 }
 
+const HISTORY_RETENTION_MONTHS = 2;
+
 @Injectable()
 export class HistoryRepository {
   private readonly logger = new Logger(HistoryRepository.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  private getHistoryRetentionCutoff(referenceDate: Date = new Date()): Date {
+    const cutoff = new Date(referenceDate);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - HISTORY_RETENTION_MONTHS);
+
+    return cutoff;
+  }
+
+  private async deleteExpiredHistoryEntries(): Promise<void> {
+    const cutoffDate = this.getHistoryRetentionCutoff();
+
+    try {
+      const result = await this.prisma.loan.deleteMany({
+        where: {
+          // Keep active loans (returnedAt === null) so ongoing rentals stay visible.
+          returnedAt: {
+            not: null,
+            lt: cutoffDate,
+          },
+        },
+      });
+
+      if (result.count > 0) {
+        this.logger.debug(`Deleted ${result.count} expired history entries older than ${HISTORY_RETENTION_MONTHS} months`);
+      }
+    } catch (error: unknown) {
+      // Cleanup should not block dashboard/history reads.
+      // Log the issue and continue so users still can access current data.
+      this.logger.error(
+        'Failed to delete expired history entries:',
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
 
   /**
    * Get dashboard statistics and active loans
@@ -69,6 +105,8 @@ export class HistoryRepository {
     this.logger.debug('Fetching dashboard statistics');
 
     try {
+      await this.deleteExpiredHistoryEntries();
+
       return await this.prisma.$transaction(async (tx) => {
         // Parallel COUNT queries for all device statuses (4x faster than sequential)
         const [availableCount, onLoanCount, defectCount, maintenanceCount] =
@@ -139,6 +177,8 @@ export class HistoryRepository {
     this.logger.debug(`Fetching history: page=${page}, pageSize=${pageSize}, deviceId=${deviceId || 'all'}, from=${from || 'none'}, to=${to || 'none'}`);
 
     try {
+      await this.deleteExpiredHistoryEntries();
+
       // Build dynamic WHERE clause
       const where: Prisma.LoanWhereInput = {};
 
