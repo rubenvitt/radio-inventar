@@ -9,6 +9,11 @@ export const envSchema = z
     ALLOWED_ORIGINS: z.string().optional().default(''),
     PUBLIC_APP_URL: z.string().optional(),
     API_TOKEN: z.string().min(32, 'API_TOKEN must be at least 32 characters for security'),
+    POCKET_ID_ISSUER_URL: z.string().url().optional().default('http://localhost:1411'),
+    POCKET_ID_CLIENT_ID: z.string().optional().default('radio-inventar'),
+    POCKET_ID_CLIENT_SECRET: z.string().optional().default('change-me'),
+    POCKET_ID_CALLBACK_URL: z.string().url().optional().default('http://localhost:3000/api/admin/auth/pocketid/callback'),
+    POCKET_ID_SCOPE: z.string().optional().default('openid profile email'),
   })
   .superRefine((data, ctx) => {
     // Apply default for PUBLIC_APP_URL

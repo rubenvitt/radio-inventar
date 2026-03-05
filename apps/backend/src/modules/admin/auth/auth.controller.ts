@@ -1,73 +1,135 @@
-import { Controller, Post, Put, Get, Body, Req, Res, Logger, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, Req, Res, Logger, UnauthorizedException, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, ApiBody } from '@nestjs/swagger';
-import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { ChangeCredentialsDto } from './dto/change-credentials.dto';
 import { ChangeCredentialsResponseDto } from './dto/change-credentials-response.dto';
 import { Public } from '../../../common/decorators';
 import { AUTH_ERROR_MESSAGES, AUTH_CONFIG } from '@radio-inventar/shared';
 import { getSessionCookieOptions } from '../../../config/session.config';
-
-/**
- * FIX M10: Helper function to check if running in test environment
- * Encapsulates the NODE_ENV check for better testability and cleaner code
- */
-function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === 'test';
-}
+import { PocketIdConfigService } from '../../../config/pocket-id.config';
 
 @ApiTags('admin/auth')
-// FIX M9: Include LoginDto in @ApiExtraModels for proper Swagger documentation
-@ApiExtraModels(SessionResponseDto, LoginDto, ChangeCredentialsDto, ChangeCredentialsResponseDto)
+@ApiExtraModels(SessionResponseDto, ChangeCredentialsDto, ChangeCredentialsResponseDto)
 @Controller('admin/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly pocketIdConfig: PocketIdConfigService,
+  ) {}
 
-  @Post('login')
+  private sanitizeReturnTo(returnTo?: string): string {
+    if (!returnTo) {
+      return '/admin';
+    }
+
+    return returnTo.startsWith('/') ? returnTo : '/admin';
+  }
+
+  @Get('pocketid/login')
   @Public()
-  // Review #2: Use AUTH_CONFIG constants for testability
-  // Note: ConfigService cannot be used in @Throttle decorator (compile-time vs runtime)
-  // FIX M10: Extract environment check to helper function for cleaner code
-  //
-  // M3 SECURITY NOTE: Current rate-limiting is IP-based only
-  // POST-MVP ENHANCEMENT: Add account-level lockout to prevent credential stuffing
-  // Recommended implementation:
-  //   - Track failed attempts per username in Redis/DB
-  //   - Lock account after N failed attempts (e.g., 5-10)
-  //   - Implement exponential backoff or CAPTCHA requirement
-  //   - Add account unlock mechanism (time-based or admin intervention)
-  // DECISION: Defer to Post-MVP - IP-based limiting is sufficient for single-admin MVP
-  @Throttle({ default: { limit: isTestEnvironment() ? AUTH_CONFIG.RATE_LIMIT_TEST_ATTEMPTS : AUTH_CONFIG.RATE_LIMIT_ATTEMPTS, ttl: AUTH_CONFIG.RATE_LIMIT_TTL_MS } })
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Admin-Login' })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Login erfolgreich', type: SessionResponseDto })
-  @ApiResponse({ status: 401, description: 'Ungültige Zugangsdaten' })
-  @ApiResponse({ status: 429, description: 'Zu viele Login-Versuche' })
-  async login(@Body() dto: LoginDto, @Req() req: Request): Promise<SessionResponseDto> {
-    this.logger.log('POST /api/admin/auth/login');
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Weiterleitung zu Pocket ID Login' })
+  @ApiResponse({ status: 302, description: 'Weiterleitung zu Pocket ID' })
+  async pocketIdLogin(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('returnTo') returnTo?: string,
+  ): Promise<void> {
+    this.logger.log('GET /api/admin/auth/pocketid/login');
 
-    const user = await this.authService.validateCredentials(dto.username, dto.password);
+    const oidcConfig = await this.pocketIdConfig.getOpenIdConfiguration();
+    const state = randomUUID();
 
-    if (!user) {
+    req.session.pocketIdState = state;
+    req.session.postLoginRedirect = this.sanitizeReturnTo(returnTo);
+    await this.authService.saveSession(req);
+
+    const authUrl = new URL(oidcConfig.authorization_endpoint);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('client_id', this.pocketIdConfig.clientId);
+    authUrl.searchParams.set('redirect_uri', this.pocketIdConfig.callbackUrl);
+    authUrl.searchParams.set('scope', this.pocketIdConfig.scope);
+    authUrl.searchParams.set('state', state);
+
+    res.redirect(authUrl.toString());
+  }
+
+  @Get('pocketid/callback')
+  @Public()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Pocket ID Callback' })
+  @ApiResponse({ status: 302, description: 'Login abgeschlossen, Weiterleitung zurück ins Frontend' })
+  async pocketIdCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('code') code?: string,
+    @Query('state') state?: string,
+  ): Promise<void> {
+    this.logger.log('GET /api/admin/auth/pocketid/callback');
+
+    if (!code || !state || state !== req.session.pocketIdState) {
       throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
 
-    await this.authService.createSession(req, user);
+    const returnTo = this.sanitizeReturnTo(req.session.postLoginRedirect);
 
-    return {
-      username: user.username,
-      isValid: true,
+    const oidcConfig = await this.pocketIdConfig.getOpenIdConfiguration();
+
+    const tokenResponse = await fetch(oidcConfig.token_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: this.pocketIdConfig.callbackUrl,
+        client_id: this.pocketIdConfig.clientId,
+        client_secret: this.pocketIdConfig.clientSecret,
+      }).toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    const tokenPayload = await tokenResponse.json() as { access_token?: string };
+    if (!tokenPayload.access_token) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    const userInfoResponse = await fetch(oidcConfig.userinfo_endpoint, {
+      headers: { Authorization: `Bearer ${tokenPayload.access_token}` },
+    });
+
+    if (!userInfoResponse.ok) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    const userInfo = await userInfoResponse.json() as {
+      sub?: string;
+      preferred_username?: string;
+      name?: string;
+      email?: string;
     };
+
+    const userId = userInfo.sub;
+    const username = userInfo.preferred_username || userInfo.name || userInfo.email || userInfo.sub;
+    if (!userId || !username) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
+    }
+
+    await this.authService.createSessionFromPocketId(req, { id: userId, username });
+
+    res.redirect(this.pocketIdConfig.buildFrontendRedirect(returnTo));
   }
 
   @Post('logout')
-  @SkipThrottle() // No rate limiting for logout - session-based, no brute-force risk
+  @SkipThrottle()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin-Logout' })
   @ApiResponse({ status: 200, description: 'Logout erfolgreich' })
@@ -76,15 +138,13 @@ export class AuthController {
     this.logger.log('POST /api/admin/auth/logout');
 
     await this.authService.destroySession(req);
-
-    // Review #2 fix: clearCookie must use same options as cookie was set with
     res.clearCookie(AUTH_CONFIG.SESSION_COOKIE_NAME, getSessionCookieOptions());
 
     return { message: 'Logout erfolgreich' };
   }
 
   @Get('session')
-  @SkipThrottle() // No rate limiting for session check - called frequently during navigation
+  @SkipThrottle()
   @ApiOperation({ summary: 'Session-Status prüfen' })
   @ApiResponse({ status: 200, description: 'Session gültig', type: SessionResponseDto })
   @ApiResponse({ status: 401, description: 'Session ungültig oder abgelaufen' })
@@ -94,23 +154,12 @@ export class AuthController {
   }
 
   @Put('credentials')
-  // Rate limit credential changes to prevent brute force attacks
-  @Throttle({ default: { limit: isTestEnvironment() ? AUTH_CONFIG.RATE_LIMIT_TEST_ATTEMPTS : AUTH_CONFIG.RATE_LIMIT_ATTEMPTS, ttl: AUTH_CONFIG.RATE_LIMIT_TTL_MS } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin-Zugangsdaten ändern' })
   @ApiBody({ type: ChangeCredentialsDto })
   @ApiResponse({ status: 200, description: 'Zugangsdaten erfolgreich geändert', type: ChangeCredentialsResponseDto })
-  @ApiResponse({ status: 400, description: 'Ungültige Eingabedaten' })
-  @ApiResponse({ status: 401, description: 'Aktuelles Passwort falsch oder nicht authentifiziert' })
-  @ApiResponse({ status: 409, description: 'Benutzername bereits vergeben' })
-  @ApiResponse({ status: 429, description: 'Zu viele Versuche' })
   async changeCredentials(@Body() dto: ChangeCredentialsDto, @Req() req: Request): Promise<ChangeCredentialsResponseDto> {
     this.logger.log('PUT /api/admin/auth/credentials');
-    return this.authService.changeCredentials(
-      req,
-      dto.currentPassword,
-      dto.newUsername,
-      dto.newPassword,
-    );
+    return this.authService.changeCredentials(req, dto.currentPassword, dto.newUsername, dto.newPassword);
   }
 }

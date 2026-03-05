@@ -5,11 +5,15 @@ declare module 'express-session' {
     userId?: string;
     isAdmin?: boolean;
     username?: string;
+    pocketIdState?: string;
+    postLoginRedirect?: string;
   }
 
   interface SessionData {
     userId?: string;
     isAdmin?: boolean;
     username?: string;
+    pocketIdState?: string;
+    postLoginRedirect?: string;
   }
 }
