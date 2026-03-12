@@ -120,12 +120,12 @@ function HistoryErrorFallback({
   error,
   resetErrorBoundary,
 }: {
-  error: Error;
+  error: unknown;
   resetErrorBoundary: () => void;
 }) {
   // resetErrorBoundary clears the error boundary state
   // This causes HistoryContent to remount, which triggers useAdminHistory to refetch
-  return <HistoryError error={error} onRetry={resetErrorBoundary} />;
+  return <HistoryError error={error instanceof Error ? error : new Error('Unbekannter Fehler')} onRetry={resetErrorBoundary} />;
 }
 
 // === Main Page Component ===
@@ -207,7 +207,7 @@ function HistoryContent() {
     return (
       <div className="container mx-auto p-4 space-y-6">
         <PageHeader onRefresh={refetch} isFetching={isFetching} />
-        <HistoryError error={error} onRetry={refetch} />
+        <HistoryError error={error instanceof Error ? error : new Error('Unbekannter Fehler')} onRetry={refetch} />
       </div>
     );
   }

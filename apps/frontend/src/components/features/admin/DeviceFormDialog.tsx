@@ -155,8 +155,8 @@ export function DeviceFormDialog({ open, onOpenChange, device }: DeviceFormDialo
       const result = UpdateDeviceSchema.safeParse(updateData);
       if (!result.success) {
         // CRITICAL FIX #6: Ensure errors array exists before iterating
-        if (result.error?.errors && result.error.errors.length > 0) {
-          result.error.errors.forEach(err => {
+        if (result.error?.issues && result.error.issues.length > 0) {
+          result.error.issues.forEach(err => {
             const schemaField = err.path[0] as keyof CreateDevice;
             const formField = fieldNameMap[schemaField] || (schemaField as keyof FieldErrors);
             errors[formField] = err.message;
@@ -174,8 +174,8 @@ export function DeviceFormDialog({ open, onOpenChange, device }: DeviceFormDialo
       const result = CreateDeviceSchema.safeParse(createData);
       if (!result.success) {
         // CRITICAL FIX #6: Ensure errors array exists before iterating
-        if (result.error?.errors && result.error.errors.length > 0) {
-          result.error.errors.forEach(err => {
+        if (result.error?.issues && result.error.issues.length > 0) {
+          result.error.issues.forEach(err => {
             const schemaField = err.path[0] as keyof CreateDevice;
             const formField = fieldNameMap[schemaField] || (schemaField as keyof FieldErrors);
             errors[formField] = err.message;

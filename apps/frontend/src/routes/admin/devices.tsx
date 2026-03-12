@@ -29,10 +29,10 @@ function DevicesErrorFallback({
   error,
   resetErrorBoundary,
 }: {
-  error: Error;
+  error: unknown;
   resetErrorBoundary: () => void;
 }) {
-  const errorMessage = getUserFriendlyErrorMessage(error);
+  const errorMessage = getUserFriendlyErrorMessage(error instanceof Error ? error : null);
 
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-4">

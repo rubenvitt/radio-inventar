@@ -46,7 +46,7 @@ export class HistoryService {
     // Validate response with Zod schema
     const validation = DashboardStatsSchema.safeParse(stats);
     if (!validation.success) {
-      this.logger.error('Dashboard stats validation failed:', validation.error.errors);
+      this.logger.error('Dashboard stats validation failed:', validation.error.issues);
       throw new BadRequestException('Invalid dashboard stats response');
     }
 
@@ -72,10 +72,10 @@ export class HistoryService {
     // Validate filters with Zod schema (includes date range validation)
     const validation = HistoryFiltersSchema.safeParse(filters);
     if (!validation.success) {
-      this.logger.warn('History filters validation failed:', validation.error.errors);
+      this.logger.warn('History filters validation failed:', validation.error.issues);
 
       // Extract first error message (German, from zod-error-map)
-      const firstError = validation.error.errors[0];
+      const firstError = validation.error.issues[0];
       const errorMessage = firstError?.message || 'Ungültige Filter-Parameter';
 
       throw new BadRequestException(errorMessage);

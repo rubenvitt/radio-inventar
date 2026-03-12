@@ -4,7 +4,13 @@
   "_comment_metadata": "Metadata fields (version, description, keywords, author, license) are kept for documentation and potential future publishing. These fields are ignored by npm/pnpm when private: true is set.",
   "version": "0.1.0",
   "description": "Shared TypeScript types and Zod schemas for Radio-Inventar",
-  "keywords": ["radio-inventar", "zod", "schemas", "types", "typescript"],
+  "keywords": [
+    "radio-inventar",
+    "zod",
+    "schemas",
+    "types",
+    "typescript"
+  ],
   "author": "Radio-Inventar Team",
   "license": "MIT",
   "type": "module",
@@ -13,7 +19,9 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "_comment_files": "files field kept for documentation of what would be published if package becomes public.",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "_comment_wildcard_export": "The ./* wildcard export enables direct imports like '@radio-inventar/shared/schemas/device.schema' for tree-shaking and selective imports. TypeScript and bundlers handle the .js/.d.ts extension mapping automatically - consumers must include the file basename (e.g., 'import { DeviceSchema } from \"@radio-inventar/shared/schemas/device.schema\"' NOT \"...schemas/device\").",
   "exports": {
     ".": {
@@ -39,7 +47,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   },
   "peerDependencies": {
     "typescript": ">=5.7.0"
@@ -51,6 +59,6 @@
   },
   "_comment_peerDependencies": "TypeScript is required for BUILD (devDependency in root package.json) but optional for CONSUMPTION: (1) JS-only consumers can use Zod runtime validation without TS, (2) .d.ts files are included in dist/ for TS consumers, (3) TS version is enforced at dev time via root package.json",
   "devDependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   }
 }

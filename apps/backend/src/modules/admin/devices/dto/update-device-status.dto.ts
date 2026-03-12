@@ -76,7 +76,7 @@ export class UpdateDeviceStatusDto {
         throw error;
       }
       if (error instanceof ZodError) {
-        const messages = error.errors.map(err => {
+        const messages = error.issues.map(err => {
           const path = err.path.join('.');
           return path ? `${path}: ${err.message}` : `status: ${err.message}`;
         });
