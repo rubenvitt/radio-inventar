@@ -10,7 +10,9 @@
     "baseUrl": "./src",
 
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@radio-inventar/shared": ["../../../packages/shared/dist/index.d.ts"],
+      "@radio-inventar/shared/*": ["../../../packages/shared/dist/*"]
     },
 
     "declaration": true,
@@ -23,6 +25,7 @@
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
     "strict": true,
+    "isolatedModules": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,

@@ -53,7 +53,7 @@ class RowErrorBoundary extends Component<{ children: ReactNode; itemId: string }
   }
 
   override componentDidCatch(error: Error): void {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error(`Error rendering row ${this.props.itemId}:`, error);
     }
   }

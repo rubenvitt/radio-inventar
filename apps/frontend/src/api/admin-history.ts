@@ -131,9 +131,9 @@ export async function fetchAdminHistory(filters?: HistoryQueryFilters): Promise<
   const validated = HistoryResponseSchema.safeParse(response);
 
   if (!validated.success) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('History response validation error:', validated.error);
-      const errorDetail = validated.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errorDetail = validated.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`Invalid response format from server: ${errorDetail}`);
     }
     // Production: Hide detailed schema errors from user
@@ -169,7 +169,7 @@ export async function fetchDevicesForFilter(): Promise<DeviceOption[]> {
   const validated = DevicesFilterResponseSchema.safeParse(response);
 
   if (!validated.success) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('Devices response validation error:', validated.error);
     }
     throw new Error('Invalid device list response from server');

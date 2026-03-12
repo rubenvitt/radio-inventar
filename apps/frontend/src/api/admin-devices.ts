@@ -158,7 +158,7 @@ export async function fetchAdminDevices(filters?: DeviceFilters): Promise<Device
 
   if (!validated.success) {
     console.error('Validation error:', validated.error);
-    const errorDetail = validated.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    const errorDetail = validated.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     throw new Error(`Invalid response format from server: ${errorDetail}`);
   }
 

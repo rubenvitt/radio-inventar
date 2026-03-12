@@ -69,7 +69,7 @@ function DashboardSkeleton() {
  * Dashboard Error State Component
  * Uses dashboard-specific error messages (getDashboardErrorMessage)
  */
-function DashboardError({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
+function DashboardError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[200px] gap-4 p-4">
       <AlertCircle className="h-12 w-12 text-destructive" />
@@ -77,7 +77,7 @@ function DashboardError({ error, onRetry }: { error: Error | null; onRetry: () =
         Dashboard konnte nicht geladen werden
       </p>
       <p className="text-muted-foreground text-sm text-center">
-        {getDashboardErrorMessage(error)}
+        {getDashboardErrorMessage(error instanceof Error ? error : null)}
       </p>
       <TouchButton onClick={onRetry} touchSize="lg">
         <RefreshCw className="h-4 w-4 mr-2" />
@@ -95,7 +95,7 @@ export function Component() {
   const { data, isLoading, error, refetch, isFetching } = useAdminDashboard();
 
   // AC5: Error state with dashboard-specific error messages
-  if (error) return <DashboardError error={error} onRetry={refetch} />;
+  if (error) return <DashboardError error={error instanceof Error ? error : null} onRetry={refetch} />;
 
   // AC5: Loading state
   if (isLoading) return <DashboardSkeleton />;
@@ -106,7 +106,7 @@ export function Component() {
   return (
     <ErrorBoundary
       FallbackComponent={({ error, resetErrorBoundary }) => (
-        <DashboardError error={error} onRetry={resetErrorBoundary} />
+        <DashboardError error={error instanceof Error ? error : null} onRetry={resetErrorBoundary} />
       )}
     >
       <div className="container mx-auto p-4 space-y-6">

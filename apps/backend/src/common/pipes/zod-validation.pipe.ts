@@ -23,7 +23,7 @@ export class ZodValidationPipe implements PipeTransform {
     } catch (error) {
       if (error instanceof ZodError) {
         // Format Zod errors into user-friendly messages
-        const messages = error.errors.map(err => {
+        const messages = error.issues.map(err => {
           const path = err.path.join('.');
           return path ? `${path}: ${err.message}` : err.message;
         });
