@@ -9,6 +9,10 @@ export const AUTH_ERROR_MESSAGES = Object.freeze({
   USERNAME_TAKEN: 'Dieser Benutzername ist bereits vergeben',
   CREDENTIALS_UPDATED: 'Zugangsdaten erfolgreich aktualisiert',
   NO_CHANGES: 'Mindestens neuer Benutzername oder neues Passwort muss angegeben werden',
+  EXTERNAL_AUTH_ONLY: 'Admin-Login ist nur über Pocket ID verfügbar',
+  EXTERNAL_AUTH_MANAGED: 'Zugangsdaten werden in Pocket ID verwaltet',
+  POCKET_ID_LOGIN_FAILED: 'Pocket-ID-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+  POCKET_ID_NOT_CONFIGURED: 'Pocket ID ist nicht korrekt konfiguriert',
 } as const);
 
 export const AUTH_CONFIG = Object.freeze({
@@ -24,4 +28,3 @@ export const AUTH_CONFIG = Object.freeze({
   // Session cookie name (Review #2: centralized constant)
   SESSION_COOKIE_NAME: 'radio-inventar.sid',
 } as const);
-

@@ -133,7 +133,7 @@ describe('AdminAuthController (e2e)', () => {
       const sessionCookie = findSessionCookie(cookies);
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
-      expect(sessionCookie).toContain('SameSite=Strict');
+      expect(sessionCookie).toContain('SameSite=Lax');
     });
 
     it('should return 401 for wrong password (AC#3 - Invalid Credentials)', async () => {
@@ -468,7 +468,7 @@ describe('AdminAuthController (e2e)', () => {
       expect(sessionCookie).toContain('HttpOnly');
     });
 
-    it('should set SameSite=Strict on session cookie', async () => {
+    it('should set SameSite=Lax on session cookie', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/admin/auth/login')
         .send({
@@ -479,7 +479,7 @@ describe('AdminAuthController (e2e)', () => {
 
       const cookies = response.headers['set-cookie'];
       const sessionCookie = findSessionCookie(cookies);
-      expect(sessionCookie).toContain('SameSite=Strict');
+      expect(sessionCookie).toContain('SameSite=Lax');
     });
 
     it('should set correct maxAge for 24h session timeout (AC#5)', async () => {

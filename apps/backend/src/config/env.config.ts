@@ -9,6 +9,10 @@ export const envSchema = z
     ALLOWED_ORIGINS: z.string().optional().default(''),
     PUBLIC_APP_URL: z.string().optional(),
     API_TOKEN: z.string().min(32, 'API_TOKEN must be at least 32 characters for security'),
+    POCKET_ID_ISSUER_URL: z.string().optional().default(''),
+    POCKET_ID_CLIENT_ID: z.string().optional().default(''),
+    POCKET_ID_CLIENT_SECRET: z.string().optional().default(''),
+    POCKET_ID_REDIRECT_URI: z.string().optional().default(''),
   })
   .superRefine((data, ctx) => {
     // Apply default for PUBLIC_APP_URL
@@ -34,6 +38,53 @@ export const envSchema = z
         message: 'PUBLIC_APP_URL must use HTTPS in production',
         path: ['PUBLIC_APP_URL'],
       });
+    }
+
+    const pocketIdRequiredFields = [
+      'POCKET_ID_ISSUER_URL',
+      'POCKET_ID_CLIENT_ID',
+      'POCKET_ID_CLIENT_SECRET',
+      'POCKET_ID_REDIRECT_URI',
+    ] as const;
+
+    const hasAnyPocketIdConfig = pocketIdRequiredFields.some(
+      (field) => data[field].trim().length > 0,
+    );
+
+    if (!hasAnyPocketIdConfig) {
+      return;
+    }
+
+    for (const field of pocketIdRequiredFields) {
+      if (data[field].trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${field} is required when Pocket ID authentication is enabled`,
+          path: [field],
+        });
+      }
+    }
+
+    for (const [field, value] of [
+      ['POCKET_ID_ISSUER_URL', data.POCKET_ID_ISSUER_URL],
+      ['POCKET_ID_REDIRECT_URI', data.POCKET_ID_REDIRECT_URI],
+    ] as const) {
+      try {
+        const pocketIdUrl = new URL(value);
+        if (data.NODE_ENV === 'production' && pocketIdUrl.protocol !== 'https:') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field} must use HTTPS in production`,
+            path: [field],
+          });
+        }
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${field} is not a valid URL`,
+          path: [field],
+        });
+      }
     }
   })
   .transform((data) => ({

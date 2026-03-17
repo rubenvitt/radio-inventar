@@ -51,7 +51,9 @@ Nach dem Start ist verfügbar:
 1. Öffne http://localhost:5173
 2. Beim ersten Start wirst du zur Token-Konfiguration weitergeleitet
 3. Setze das API-Token (muss mit `API_TOKEN` in der Backend-Konfiguration übereinstimmen)
-4. Erstelle einen Admin-Benutzer unter `/setup`
+4. Melde dich im Admin-Bereich an
+
+Standardmäßig ist lokaler Admin-Login aktiv. Wenn `POCKET_ID_*` gesetzt ist, wird stattdessen Pocket ID (OIDC/OAuth2) verwendet und das lokale `/setup` übersprungen. Wer Zugriff auf den OIDC-Client hat, wird direkt in Pocket ID gesteuert.
 
 ## Tech Stack
 
@@ -153,6 +155,12 @@ API_TOKEN=your-api-token-min-32-characters-long
 
 # Öffentliche URL für QR-Codes (HTTPS in Production erforderlich)
 PUBLIC_APP_URL=http://localhost:5173
+
+# Optional: Pocket ID (OIDC/OAuth2) für Admin-Login
+POCKET_ID_ISSUER_URL=https://pocket-id.example.com
+POCKET_ID_CLIENT_ID=radio-inventar
+POCKET_ID_CLIENT_SECRET=change-me
+POCKET_ID_REDIRECT_URI=http://localhost:3000/api/admin/auth/callback
 ```
 
 ### Frontend (.env)
@@ -183,7 +191,10 @@ VITE_API_URL=http://localhost:3000/api
 
 | Methode | Endpunkt | Beschreibung |
 |---------|----------|--------------|
+| `GET` | `/api/admin/auth/config` | Auth-Modus abrufen |
 | `POST` | `/api/admin/auth/login` | Anmelden |
+| `GET` | `/api/admin/auth/pocket-id` | Pocket-ID-Login starten |
+| `GET` | `/api/admin/auth/callback` | Pocket-ID-Callback |
 | `POST` | `/api/admin/auth/logout` | Abmelden |
 | `GET` | `/api/admin/auth/session` | Session prüfen |
 | `GET` | `/api/admin/devices` | Geräte (Admin) |

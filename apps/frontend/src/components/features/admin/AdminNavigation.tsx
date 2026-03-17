@@ -2,7 +2,7 @@
 // Admin navigation header with links to Dashboard, Devices, History and Logout
 import { Link, useRouterState } from '@tanstack/react-router';
 import { LayoutDashboard, Radio, History, Settings, LogOut } from 'lucide-react';
-import { useLogout } from '@/api/auth';
+import { useAdminAuthConfig, useLogout } from '@/api/auth';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -21,7 +21,11 @@ const navItems = [
 export function AdminNavigation() {
   const router = useRouterState();
   const currentPath = router.location.pathname;
+  const authConfigQuery = useAdminAuthConfig();
   const logoutMutation = useLogout();
+  const visibleNavItems = authConfigQuery.data?.changeCredentialsEnabled === false
+    ? navItems.filter(({ to }) => to !== '/admin/settings')
+    : navItems;
 
   return (
     <header className="bg-card border-b sticky top-0 z-50">
@@ -37,7 +41,7 @@ export function AdminNavigation() {
 
           {/* Navigation Links */}
           <div className="flex items-center gap-1">
-            {navItems.map(({ to, label, icon: Icon, exact }) => {
+            {visibleNavItems.map(({ to, label, icon: Icon, exact }) => {
               const isActive = exact
                 ? currentPath === to || currentPath === `${to}/`
                 : currentPath.startsWith(to);

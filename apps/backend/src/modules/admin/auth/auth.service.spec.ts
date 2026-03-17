@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
+import { PocketIdService } from './pocket-id.service';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
 import { AUTH_ERROR_MESSAGES } from '@radio-inventar/shared';
@@ -11,6 +13,7 @@ jest.mock('bcrypt');
 describe('AuthService', () => {
   let service: AuthService;
   let repository: jest.Mocked<AuthRepository>;
+  let pocketIdService: jest.Mocked<PocketIdService>;
 
   const mockAdmin = {
     id: 'admin1abcdefghijklmnopqr',
@@ -24,16 +27,32 @@ describe('AuthService', () => {
     const mockRepository = {
       findByUsername: jest.fn(),
     };
+    const mockPocketIdService = {
+      isEnabled: jest.fn().mockReturnValue(false),
+      createAuthorizationUrl: jest.fn(),
+      authenticateCallback: jest.fn(),
+    };
+    const mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'PUBLIC_APP_URL') {
+          return 'http://localhost:5173';
+        }
+        return undefined;
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: mockRepository },
+        { provide: PocketIdService, useValue: mockPocketIdService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     repository = module.get(AuthRepository);
+    pocketIdService = module.get(PocketIdService);
 
     // Reset bcrypt mock
     jest.clearAllMocks();
@@ -124,6 +143,33 @@ describe('AuthService', () => {
         id: mockAdmin.id,
         username: mockAdmin.username,
       });
+    });
+  });
+
+  describe('auth mode', () => {
+    it('returns local auth config when Pocket ID is disabled', () => {
+      pocketIdService.isEnabled.mockReturnValue(false);
+
+      expect(service.getAuthConfig()).toEqual({
+        provider: 'local',
+        changeCredentialsEnabled: true,
+      });
+    });
+
+    it('returns pocketid auth config when Pocket ID is enabled', () => {
+      pocketIdService.isEnabled.mockReturnValue(true);
+
+      expect(service.getAuthConfig()).toEqual({
+        provider: 'pocketid',
+        changeCredentialsEnabled: false,
+      });
+    });
+
+    it('throws when local auth is disabled by Pocket ID mode', () => {
+      pocketIdService.isEnabled.mockReturnValue(true);
+
+      expect(() => service.assertLocalAuthEnabled()).toThrow(ForbiddenException);
+      expect(() => service.assertLocalAuthEnabled()).toThrow(AUTH_ERROR_MESSAGES.EXTERNAL_AUTH_ONLY);
     });
   });
 

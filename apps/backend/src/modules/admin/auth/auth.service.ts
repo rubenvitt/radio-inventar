@@ -1,10 +1,22 @@
-import { Injectable, Logger, UnauthorizedException, InternalServerErrorException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  InternalServerErrorException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { AuthRepository } from './auth.repository';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { ChangeCredentialsResponseDto } from './dto/change-credentials-response.dto';
-import { AUTH_ERROR_MESSAGES, AUTH_CONFIG } from '@radio-inventar/shared';
+import { PocketIdService } from './pocket-id.service';
+import { AUTH_ERROR_MESSAGES, AUTH_CONFIG, type AdminAuthConfig } from '@radio-inventar/shared';
+import type { EnvConfig } from '../../../config/env.config';
 
 // Dummy hash for timing-attack prevention when user not found
 // Generated with bcrypt.hash('dummy', 12) - same cost factor as real passwords
@@ -62,7 +74,60 @@ function wrapSessionCallback<T>(
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly authRepository: AuthRepository) {}
+  constructor(
+    private readonly authRepository: AuthRepository,
+    private readonly pocketIdService: PocketIdService,
+    private readonly configService: ConfigService<EnvConfig, true>,
+  ) {}
+
+  getAuthConfig(): AdminAuthConfig {
+    const provider = this.pocketIdService.isEnabled() ? 'pocketid' : 'local';
+
+    return {
+      provider,
+      changeCredentialsEnabled: provider === 'local',
+    };
+  }
+
+  assertLocalAuthEnabled(): void {
+    if (this.pocketIdService.isEnabled()) {
+      throw new ForbiddenException(AUTH_ERROR_MESSAGES.EXTERNAL_AUTH_ONLY);
+    }
+  }
+
+  async getPocketIdAuthorizationUrl(request: Request): Promise<string> {
+    return this.pocketIdService.createAuthorizationUrl(request);
+  }
+
+  async completePocketIdLogin(
+    request: Request,
+    params: { code: string | undefined; state: string | undefined; error: string | undefined },
+  ): Promise<{ id: string; username: string }> {
+    const user = await this.pocketIdService.authenticateCallback(request, params);
+    await this.createSession(request, user);
+    return user;
+  }
+
+  getPocketIdSuccessRedirectUrl(): string {
+    return new URL('/admin', this.configService.get('PUBLIC_APP_URL')).toString();
+  }
+
+  getPocketIdFailureRedirectUrl(error: unknown): string {
+    const redirectUrl = new URL('/admin/login', this.configService.get('PUBLIC_APP_URL'));
+
+    if (error instanceof ServiceUnavailableException) {
+      redirectUrl.searchParams.set('error', 'pocketid-unavailable');
+      return redirectUrl.toString();
+    }
+
+    if (error instanceof UnauthorizedException) {
+      redirectUrl.searchParams.set('error', 'pocketid-failed');
+      return redirectUrl.toString();
+    }
+
+    redirectUrl.searchParams.set('error', 'pocketid-failed');
+    return redirectUrl.toString();
+  }
 
   async validateCredentials(username: string, password: string): Promise<{ id: string; username: string } | null> {
     const admin = await this.authRepository.findByUsername(username);
@@ -132,6 +197,8 @@ export class AuthService {
     newUsername?: string,
     newPassword?: string,
   ): Promise<ChangeCredentialsResponseDto> {
+    this.assertLocalAuthEnabled();
+
     const userId = request.session?.userId;
     if (!userId) {
       throw new UnauthorizedException(AUTH_ERROR_MESSAGES.SESSION_EXPIRED);

@@ -12,6 +12,8 @@ import { AUTH_ERROR_MESSAGES } from '@radio-inventar/shared';
 vi.mock('@/api/auth', () => ({
   useLogin: vi.fn(),
   isRateLimitError: vi.fn(),
+  useAdminAuthConfig: vi.fn(),
+  startPocketIdLogin: vi.fn(),
 }));
 
 // Mock TanStack Router
@@ -23,11 +25,13 @@ vi.mock('@tanstack/react-router', async () => {
   };
 });
 
-import { useLogin, isRateLimitError } from '@/api/auth';
+import { useLogin, isRateLimitError, useAdminAuthConfig, startPocketIdLogin } from '@/api/auth';
 import { useNavigate } from '@tanstack/react-router';
 
 const mockUseLogin = useLogin as ReturnType<typeof vi.fn>;
 const mockIsRateLimitError = isRateLimitError as ReturnType<typeof vi.fn>;
+const mockUseAdminAuthConfig = useAdminAuthConfig as ReturnType<typeof vi.fn>;
+const mockStartPocketIdLogin = startPocketIdLogin as ReturnType<typeof vi.fn>;
 const mockUseNavigate = useNavigate as ReturnType<typeof vi.fn>;
 
 // Helper to create mock mutation return value
@@ -65,6 +69,12 @@ describe('AdminLoginForm', () => {
     vi.clearAllMocks();
     mockUseLogin.mockReturnValue(createMockMutation());
     mockIsRateLimitError.mockReturnValue(false);
+    mockUseAdminAuthConfig.mockReturnValue({
+      data: { provider: 'local', changeCredentialsEnabled: true },
+      isLoading: false,
+      isError: false,
+    });
+    mockStartPocketIdLogin.mockReset();
     mockUseNavigate.mockReturnValue(vi.fn());
   });
 
@@ -119,6 +129,36 @@ describe('AdminLoginForm', () => {
       // Note: autoFocus prop behavior in JSDOM may not render the attribute
       expect(usernameInput).toBeInTheDocument();
       expect(usernameInput.tabIndex).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Pocket ID mode', () => {
+    it('renders a Pocket ID login button when external auth is enabled', () => {
+      mockUseAdminAuthConfig.mockReturnValue({
+        data: { provider: 'pocketid', changeCredentialsEnabled: false },
+        isLoading: false,
+        isError: false,
+      });
+
+      renderWithProviders(<AdminLoginForm />);
+
+      expect(screen.getByRole('button', { name: 'Mit Pocket ID anmelden' })).toBeInTheDocument();
+      expect(screen.queryByLabelText('Benutzername')).not.toBeInTheDocument();
+    });
+
+    it('navigates to the backend Pocket ID login URL when the button is clicked', async () => {
+      mockUseAdminAuthConfig.mockReturnValue({
+        data: { provider: 'pocketid', changeCredentialsEnabled: false },
+        isLoading: false,
+        isError: false,
+      });
+
+      const user = userEvent.setup();
+      renderWithProviders(<AdminLoginForm />);
+
+      await user.click(screen.getByRole('button', { name: 'Mit Pocket ID anmelden' }));
+
+      expect(mockStartPocketIdLogin).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -492,16 +532,13 @@ describe('AdminLoginForm', () => {
     });
 
     it('rate limit timeout clears after 60 seconds using fake timers', async () => {
-      // AC5: Verify countdown clears after 60s using vi.advanceTimersByTime()
-      vi.useFakeTimers();
-
       mockIsRateLimitError.mockReturnValue(true);
       const mockMutate = vi.fn((_credentials, { onError }) => {
         onError(new Error(AUTH_ERROR_MESSAGES.TOO_MANY_ATTEMPTS));
       });
       mockUseLogin.mockReturnValue(createMockMutation({ mutate: mockMutate }));
 
-      const user = userEvent.setup({ delay: null });
+      const user = userEvent.setup({ delay: null, advanceTimers: vi.advanceTimersByTime });
       renderWithProviders(<AdminLoginForm />);
 
       await user.type(screen.getByLabelText('Benutzername'), 'testadmin');
@@ -524,8 +561,6 @@ describe('AdminLoginForm', () => {
         const button = screen.getByRole('button', { name: 'Anmelden' });
         expect(button).not.toBeDisabled();
       });
-
-      vi.useRealTimers();
     });
 
     it('countdown mechanism is active (implementation detail test)', async () => {

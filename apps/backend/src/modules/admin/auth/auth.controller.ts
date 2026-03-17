@@ -1,4 +1,17 @@
-import { Controller, Post, Put, Get, Body, Req, Res, Logger, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Put,
+  Get,
+  Body,
+  Req,
+  Res,
+  Query,
+  Logger,
+  UnauthorizedException,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiExtraModels, ApiBody } from '@nestjs/swagger';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
@@ -7,7 +20,8 @@ import { LoginDto } from './dto/login.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { ChangeCredentialsDto } from './dto/change-credentials.dto';
 import { ChangeCredentialsResponseDto } from './dto/change-credentials-response.dto';
-import { Public } from '../../../common/decorators';
+import { AuthConfigResponseDto } from './dto/auth-config-response.dto';
+import { Public, BypassApiToken } from '../../../common/decorators';
 import { AUTH_ERROR_MESSAGES, AUTH_CONFIG } from '@radio-inventar/shared';
 import { getSessionCookieOptions } from '../../../config/session.config';
 
@@ -21,12 +35,22 @@ function isTestEnvironment(): boolean {
 
 @ApiTags('admin/auth')
 // FIX M9: Include LoginDto in @ApiExtraModels for proper Swagger documentation
-@ApiExtraModels(SessionResponseDto, LoginDto, ChangeCredentialsDto, ChangeCredentialsResponseDto)
+@ApiExtraModels(SessionResponseDto, LoginDto, ChangeCredentialsDto, ChangeCredentialsResponseDto, AuthConfigResponseDto)
 @Controller('admin/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
   constructor(private readonly authService: AuthService) {}
+
+  @Get('config')
+  @Public()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Admin-Authentifizierungsmodus abrufen' })
+  @ApiResponse({ status: 200, description: 'Authentifizierungskonfiguration', type: AuthConfigResponseDto })
+  getAuthConfig(): AuthConfigResponseDto {
+    this.logger.log('GET /api/admin/auth/config');
+    return this.authService.getAuthConfig();
+  }
 
   @Post('login')
   @Public()
@@ -51,6 +75,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Zu viele Login-Versuche' })
   async login(@Body() dto: LoginDto, @Req() req: Request): Promise<SessionResponseDto> {
     this.logger.log('POST /api/admin/auth/login');
+    this.authService.assertLocalAuthEnabled();
 
     const user = await this.authService.validateCredentials(dto.username, dto.password);
 
@@ -64,6 +89,42 @@ export class AuthController {
       username: user.username,
       isValid: true,
     };
+  }
+
+  @Get('pocket-id')
+  @Public()
+  @BypassApiToken()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Pocket-ID-Login starten' })
+  @ApiResponse({ status: 302, description: 'Weiterleitung zu Pocket ID' })
+  async startPocketIdLogin(@Req() req: Request, @Res() res: Response): Promise<void> {
+    this.logger.log('GET /api/admin/auth/pocket-id');
+    const authorizationUrl = await this.authService.getPocketIdAuthorizationUrl(req);
+    res.redirect(authorizationUrl);
+  }
+
+  @Get('callback')
+  @Public()
+  @BypassApiToken()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Pocket-ID-Callback verarbeiten' })
+  @ApiResponse({ status: 302, description: 'Weiterleitung zurück zur Anwendung' })
+  async handlePocketIdCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.logger.log('GET /api/admin/auth/callback');
+
+    try {
+      await this.authService.completePocketIdLogin(req, { code, state, error });
+      res.redirect(this.authService.getPocketIdSuccessRedirectUrl());
+    } catch (callbackError) {
+      this.logger.warn('Pocket ID callback failed');
+      res.redirect(this.authService.getPocketIdFailureRedirectUrl(callbackError));
+    }
   }
 
   @Post('logout')
@@ -106,6 +167,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Zu viele Versuche' })
   async changeCredentials(@Body() dto: ChangeCredentialsDto, @Req() req: Request): Promise<ChangeCredentialsResponseDto> {
     this.logger.log('PUT /api/admin/auth/credentials');
+    this.authService.assertLocalAuthEnabled();
     return this.authService.changeCredentials(
       req,
       dto.currentPassword,
