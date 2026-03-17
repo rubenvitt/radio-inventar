@@ -28,11 +28,24 @@ describe('AuthController', () => {
   const mockResponse = () =>
     ({
       clearCookie: jest.fn(),
+      redirect: jest.fn(),
     }) as unknown as Response;
 
   beforeEach(async () => {
     const mockService = {
       validateCredentials: jest.fn(),
+      getAuthConfig: jest.fn().mockReturnValue({
+        provider: 'local',
+        changeCredentialsEnabled: true,
+      }),
+      assertLocalAuthEnabled: jest.fn(),
+      getPocketIdAuthorizationUrl: jest.fn().mockResolvedValue('https://pocket-id.example.com/auth'),
+      completePocketIdLogin: jest.fn().mockResolvedValue({
+        id: 'pocketid:admin',
+        username: 'admin@example.com',
+      }),
+      getPocketIdSuccessRedirectUrl: jest.fn().mockReturnValue('http://localhost:5173/admin'),
+      getPocketIdFailureRedirectUrl: jest.fn().mockReturnValue('http://localhost:5173/admin/login?error=pocketid-failed'),
       createSession: jest.fn().mockResolvedValue(undefined),
       destroySession: jest.fn(),
       getSessionInfo: jest.fn(),
@@ -63,6 +76,7 @@ describe('AuthController', () => {
         username: 'admin',
         isValid: true,
       });
+      expect(service.assertLocalAuthEnabled).toHaveBeenCalledTimes(1);
       expect(service.validateCredentials).toHaveBeenCalledWith('admin', 'SecureP@ss123');
       expect(service.createSession).toHaveBeenCalledWith(req, mockUser);
     });
@@ -73,6 +87,7 @@ describe('AuthController', () => {
 
       await expect(controller.login(loginDto, req)).rejects.toThrow(UnauthorizedException);
       await expect(controller.login(loginDto, req)).rejects.toThrow(AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS);
+      expect(service.assertLocalAuthEnabled).toHaveBeenCalled();
     });
 
     it('should not create session on invalid credentials', async () => {
@@ -117,6 +132,63 @@ describe('AuthController', () => {
 
       expect(result.username).toBe('admin-user');
       expect(service.validateCredentials).toHaveBeenCalledWith('admin-user', 'SecureP@ss123');
+    });
+  });
+
+  describe('getAuthConfig', () => {
+    it('should return the current auth mode', () => {
+      service.getAuthConfig.mockReturnValue({
+        provider: 'pocketid',
+        changeCredentialsEnabled: false,
+      });
+
+      const result = controller.getAuthConfig();
+
+      expect(result).toEqual({
+        provider: 'pocketid',
+        changeCredentialsEnabled: false,
+      });
+      expect(service.getAuthConfig).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Pocket ID flow', () => {
+    it('should redirect to Pocket ID when login is started', async () => {
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await controller.startPocketIdLogin(req, res);
+
+      expect(service.getPocketIdAuthorizationUrl).toHaveBeenCalledWith(req);
+      expect(res.redirect).toHaveBeenCalledWith('https://pocket-id.example.com/auth');
+    });
+
+    it('should redirect to frontend admin page after successful callback', async () => {
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await controller.handlePocketIdCallback('code123', 'state123', undefined, req, res);
+
+      expect(service.completePocketIdLogin).toHaveBeenCalledWith(req, {
+        code: 'code123',
+        state: 'state123',
+        error: undefined,
+      });
+      expect(res.redirect).toHaveBeenCalledWith('http://localhost:5173/admin');
+    });
+
+    it('should redirect to frontend login page when callback fails', async () => {
+      const req = mockRequest();
+      const res = mockResponse();
+      const callbackError = new Error('Pocket ID failed');
+      service.completePocketIdLogin.mockRejectedValue(callbackError);
+
+      await controller.handlePocketIdCallback(undefined, undefined, 'access_denied', req, res);
+
+      expect(service.getPocketIdFailureRedirectUrl).toHaveBeenCalledWith(callbackError);
+      expect(res.redirect).toHaveBeenCalledWith(
+        'http://localhost:5173/admin/login?error=pocketid-failed',
+      );
     });
   });
 

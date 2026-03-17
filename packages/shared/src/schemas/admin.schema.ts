@@ -22,12 +22,21 @@ export const SessionDataSchema = z.object({
   isValid: z.boolean(),
 });
 
+export const AuthProviderModeSchema = z.enum(['local', 'pocketid']);
+
+export const AdminAuthConfigSchema = z.object({
+  provider: AuthProviderModeSchema,
+  changeCredentialsEnabled: z.boolean(),
+});
+
 export const LogoutResponseSchema = z.object({
   message: z.string(),
 });
 
 export type AdminUser = z.infer<typeof AdminUserSchema>;
 export type SessionData = z.infer<typeof SessionDataSchema>;
+export type AuthProviderMode = z.infer<typeof AuthProviderModeSchema>;
+export type AdminAuthConfig = z.infer<typeof AdminAuthConfigSchema>;
 export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
 
 // ================================================================================

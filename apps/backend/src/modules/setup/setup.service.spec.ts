@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { SetupService } from './setup.service';
 import { SetupRepository } from './setup.repository';
@@ -33,6 +34,12 @@ describe('SetupService', () => {
           useValue: {
             adminExists: jest.fn(),
             createAdmin: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(() => ''),
           },
         },
       ],
@@ -82,6 +89,24 @@ describe('SetupService', () => {
 
       // Should only query once due to caching
       expect(repository.adminExists).toHaveBeenCalledTimes(1);
+    });
+
+    it('should treat setup as complete when Pocket ID is enabled', async () => {
+      const configService = (service as any).configService as { get: jest.Mock };
+      configService.get.mockImplementation((key: string) => {
+        const values: Record<string, string> = {
+          POCKET_ID_ISSUER_URL: 'https://auth.example.com',
+          POCKET_ID_CLIENT_ID: 'radio-inventar',
+          POCKET_ID_CLIENT_SECRET: 'secret',
+          POCKET_ID_REDIRECT_URI: 'https://api.example.com/api/admin/auth/callback',
+        };
+        return values[key] ?? '';
+      });
+
+      const result = await service.isSetupComplete();
+
+      expect(result).toBe(true);
+      expect(repository.adminExists).not.toHaveBeenCalled();
     });
   });
 

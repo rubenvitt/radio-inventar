@@ -4,13 +4,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import {
   SessionDataSchema,
+  AdminAuthConfigSchema,
   LogoutResponseSchema,
   ChangeCredentialsResponseSchema,
   AUTH_ERROR_MESSAGES,
-  ADMIN_FIELD_LIMITS
+  ADMIN_FIELD_LIMITS,
+  type AdminAuthConfig,
 } from '@radio-inventar/shared';
 import { z } from 'zod';
-import { apiClient, ApiError, TimeoutError } from './client';
+import { apiClient, ApiError, TimeoutError, buildApiUrl } from './client';
 import { authKeys } from '@/lib/queryKeys';
 
 /** Response type for login endpoint */
@@ -35,6 +37,25 @@ interface ChangeCredentialsInput {
   currentPassword: string;
   newUsername?: string;
   newPassword?: string;
+}
+
+export async function getAdminAuthConfig(): Promise<AdminAuthConfig> {
+  const response = await apiClient.get<unknown>('/api/admin/auth/config');
+  const validated = AdminAuthConfigSchema.safeParse((response as any).data);
+
+  if (!validated.success) {
+    throw new Error('Invalid auth config response format');
+  }
+
+  return validated.data;
+}
+
+export function getPocketIdLoginUrl(): string {
+  return buildApiUrl('/api/admin/auth/pocket-id');
+}
+
+export function startPocketIdLogin(): void {
+  window.location.assign(getPocketIdLoginUrl());
 }
 
 /**
@@ -166,6 +187,15 @@ export async function logout(): Promise<LogoutResponse> {
 }
 
 // === React Query Hooks (Task 3) ===
+
+export function useAdminAuthConfig() {
+  return useQuery({
+    queryKey: authKeys.config(),
+    queryFn: getAdminAuthConfig,
+    staleTime: Infinity,
+    retry: false,
+  });
+}
 
 /**
  * Hook for login mutation

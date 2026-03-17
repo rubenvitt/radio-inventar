@@ -5,11 +5,11 @@ import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ADMIN_FIELD_LIMITS, AUTH_ERROR_MESSAGES } from '@radio-inventar/shared';
-import { useLogin, isRateLimitError } from '@/api/auth';
+import { useLogin, isRateLimitError, useAdminAuthConfig, startPocketIdLogin } from '@/api/auth';
 import { authKeys } from '@/lib/queryKeys';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 /** Rate limit timeout in milliseconds (AC5: 60 seconds) */
@@ -39,6 +39,20 @@ interface FieldErrors {
   password?: string | undefined;
 }
 
+const PocketIdErrorMessages: Record<string, string> = {
+  'pocketid-failed': AUTH_ERROR_MESSAGES.POCKET_ID_LOGIN_FAILED,
+  'pocketid-unavailable': AUTH_ERROR_MESSAGES.POCKET_ID_NOT_CONFIGURED,
+};
+
+function getPocketIdErrorFromLocation(): string | null {
+  const errorCode = new URLSearchParams(window.location.search).get('error');
+  if (!errorCode) {
+    return null;
+  }
+
+  return PocketIdErrorMessages[errorCode] ?? AUTH_ERROR_MESSAGES.POCKET_ID_LOGIN_FAILED;
+}
+
 /**
  * AdminLoginForm - Login form for admin authentication.
  *
@@ -54,18 +68,26 @@ interface FieldErrors {
 export function AdminLoginForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const authConfigQuery = useAdminAuthConfig();
   const loginMutation = useLogin();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
+  const [pocketIdError, setPocketIdError] = useState<string | null>(getPocketIdErrorFromLocation);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+
+  const isPocketIdMode = authConfigQuery.data?.provider === 'pocketid';
 
   // Check if button should be disabled due to rate limiting (AC5)
   const isRateLimited = rateLimitUntil !== null && Date.now() < rateLimitUntil;
   const isSubmitDisabled = loginMutation.isPending || isRateLimited;
+
+  useEffect(() => {
+    setPocketIdError(getPocketIdErrorFromLocation());
+  }, []);
 
   // Handle countdown timer and cleanup (CRITICAL 1 & HIGH 5 fixes)
   useEffect(() => {
@@ -146,6 +168,63 @@ export function AdminLoginForm() {
       }
     );
   };
+
+  if (authConfigQuery.isLoading) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardDescription>Anmeldemodus wird geladen...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (authConfigQuery.isError) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardDescription>Die Anmeldekonfiguration konnte nicht geladen werden.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (isPocketIdMode) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <CardDescription>
+            Der Admin-Zugang wird über Pocket ID verwaltet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {pocketIdError && (
+            <div
+              role="alert"
+              className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm"
+            >
+              {pocketIdError}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            className="w-full"
+            size="lg"
+            onClick={() => {
+              setPocketIdError(null);
+              startPocketIdLogin();
+            }}
+          >
+            Mit Pocket ID anmelden
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

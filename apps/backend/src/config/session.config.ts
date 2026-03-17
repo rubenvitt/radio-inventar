@@ -35,7 +35,8 @@ export const getSessionCookieOptions = (): {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' as const : 'strict' as const,
+    // OAuth callbacks from Pocket ID must be able to return to the backend with the session cookie.
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
     path: '/',
     ...(cookieDomain && { domain: cookieDomain }),
   };

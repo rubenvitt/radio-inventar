@@ -4,10 +4,12 @@ import {
   ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { Request } from 'express';
 import { SetupRepository } from './setup.repository';
 import { AUTH_CONFIG, SETUP_ERROR_MESSAGES } from '@radio-inventar/shared';
+import type { EnvConfig } from '../../config/env.config';
 
 /**
  * Helper to wrap session callback operations in Promise with typed exceptions.
@@ -41,13 +43,20 @@ export class SetupService {
    */
   private setupCompleteCache: boolean | null = null;
 
-  constructor(private readonly setupRepository: SetupRepository) {}
+  constructor(
+    private readonly setupRepository: SetupRepository,
+    private readonly configService: ConfigService<EnvConfig, true>,
+  ) {}
 
   /**
    * Check if the first-time setup has been completed (admin exists).
    * Uses in-memory caching for performance.
    */
   async isSetupComplete(): Promise<boolean> {
+    if (this.isPocketIdEnabled()) {
+      return true;
+    }
+
     // Return cached value if available
     if (this.setupCompleteCache !== null) {
       return this.setupCompleteCache;
@@ -69,6 +78,10 @@ export class SetupService {
     password: string,
     request: Request,
   ): Promise<{ id: string; username: string }> {
+    if (this.isPocketIdEnabled()) {
+      throw new ConflictException(SETUP_ERROR_MESSAGES.ALREADY_COMPLETE);
+    }
+
     // Double-check that no admin exists (race condition prevention)
     const exists = await this.setupRepository.adminExists();
     if (exists) {
@@ -125,5 +138,14 @@ export class SetupService {
    */
   invalidateCache(): void {
     this.setupCompleteCache = null;
+  }
+
+  private isPocketIdEnabled(): boolean {
+    return Boolean(
+      this.configService.get('POCKET_ID_ISSUER_URL') &&
+      this.configService.get('POCKET_ID_CLIENT_ID') &&
+      this.configService.get('POCKET_ID_CLIENT_SECRET') &&
+      this.configService.get('POCKET_ID_REDIRECT_URI'),
+    );
   }
 }

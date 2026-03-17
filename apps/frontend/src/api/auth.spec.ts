@@ -3,7 +3,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { login, checkSession, logout, isRateLimitError, useLogin, useSession, useLogout } from './auth';
+import {
+  login,
+  checkSession,
+  logout,
+  isRateLimitError,
+  useLogin,
+  useSession,
+  useLogout,
+  getAdminAuthConfig,
+  getPocketIdLoginUrl,
+  useAdminAuthConfig,
+} from './auth';
 import { apiClient, ApiError, TimeoutError } from './client';
 import { AUTH_ERROR_MESSAGES } from '@radio-inventar/shared';
 import { authKeys } from '@/lib/queryKeys';
@@ -21,7 +32,9 @@ vi.mock('./client', () => ({
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
   },
+  buildApiUrl: vi.fn((endpoint: string) => `http://localhost:3000${endpoint}`),
   ApiError: class ApiError extends Error {
     constructor(public status: number, public statusText: string, message: string) {
       super(message);
@@ -39,6 +52,7 @@ vi.mock('./client', () => ({
 const mockApiClient = apiClient as unknown as {
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
+  put: ReturnType<typeof vi.fn>;
 };
 
 // Helper to create QueryClient wrapper for hook tests
@@ -215,6 +229,25 @@ describe('auth.ts - API Functions', () => {
     });
   });
 
+  describe('getAdminAuthConfig()', () => {
+    it('returns validated auth configuration', async () => {
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          provider: 'pocketid',
+          changeCredentialsEnabled: false,
+        },
+      });
+
+      const result = await getAdminAuthConfig();
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/admin/auth/config');
+      expect(result).toEqual({
+        provider: 'pocketid',
+        changeCredentialsEnabled: false,
+      });
+    });
+  });
+
   describe('checkSession()', () => {
     it('returns session data when authenticated', async () => {
       // AC8: Session persistence
@@ -279,6 +312,32 @@ describe('auth.ts - API Functions', () => {
       const result = await checkSession();
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('Pocket ID helpers', () => {
+    it('builds the Pocket ID login URL from the API base URL', () => {
+      expect(getPocketIdLoginUrl()).toBe('http://localhost:3000/api/admin/auth/pocket-id');
+    });
+
+    it('useAdminAuthConfig queries the auth config endpoint', async () => {
+      mockApiClient.get.mockResolvedValue({
+        data: {
+          provider: 'local',
+          changeCredentialsEnabled: true,
+        },
+      });
+
+      const { result } = renderHook(() => useAdminAuthConfig(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data).toEqual({
+          provider: 'local',
+          changeCredentialsEnabled: true,
+        });
+      });
     });
   });
 

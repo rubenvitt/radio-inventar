@@ -153,6 +153,35 @@ describe('env.config', () => {
         }
       });
     });
+
+    describe('Pocket ID validation', () => {
+      it('accepts fully configured Pocket ID settings', () => {
+        const env = {
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
+          POCKET_ID_ISSUER_URL: 'https://auth.example.com',
+          POCKET_ID_CLIENT_ID: 'radio-inventar',
+          POCKET_ID_CLIENT_SECRET: 'super-secret',
+          POCKET_ID_REDIRECT_URI: 'https://api.example.com/api/admin/auth/callback',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(true);
+      });
+
+      it('rejects partial Pocket ID configuration', () => {
+        const env = {
+          DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+          API_TOKEN: 'test-api-token-at-least-32-characters-long',
+          POCKET_ID_ISSUER_URL: 'https://auth.example.com',
+          POCKET_ID_CLIENT_ID: 'radio-inventar',
+        };
+
+        const result = envSchema.safeParse(env);
+        expect(result.success).toBe(false);
+      });
+
+    });
   });
 
   describe('validateEnv', () => {

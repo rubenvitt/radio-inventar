@@ -1,7 +1,11 @@
 import { tokenStorage } from '@/lib/tokenStorage';
 import { API_TOKEN_ERROR_MESSAGES } from '@radio-inventar/shared';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+export function buildApiUrl(endpoint: string): string {
+  return `${API_BASE_URL}${endpoint}`;
+}
 
 /** Default timeout for API requests in milliseconds */
 const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
@@ -131,7 +135,7 @@ async function fetchWithTimeout<T>(
 export const apiClient = {
   get: async <T>(endpoint: string, timeoutMs?: number): Promise<T> => {
     return fetchWithTimeout<T>(
-      `${API_BASE_URL}${endpoint}`,
+      buildApiUrl(endpoint),
       {
         method: 'GET',
       },
@@ -141,7 +145,7 @@ export const apiClient = {
 
   post: async <T, D = unknown>(endpoint: string, data?: D, timeoutMs?: number): Promise<T> => {
     return fetchWithTimeout<T>(
-      `${API_BASE_URL}${endpoint}`,
+      buildApiUrl(endpoint),
       {
         method: 'POST',
         ...(data && { body: JSON.stringify(data) }),
@@ -152,7 +156,7 @@ export const apiClient = {
 
   put: async <T, D = unknown>(endpoint: string, data?: D, timeoutMs?: number): Promise<T> => {
     return fetchWithTimeout<T>(
-      `${API_BASE_URL}${endpoint}`,
+      buildApiUrl(endpoint),
       {
         method: 'PUT',
         ...(data && { body: JSON.stringify(data) }),
@@ -163,7 +167,7 @@ export const apiClient = {
 
   patch: async <T, D = unknown>(endpoint: string, data?: D, timeoutMs?: number): Promise<T> => {
     return fetchWithTimeout<T>(
-      `${API_BASE_URL}${endpoint}`,
+      buildApiUrl(endpoint),
       {
         method: 'PATCH',
         ...(data && { body: JSON.stringify(data) }),
@@ -174,7 +178,7 @@ export const apiClient = {
 
   delete: async <T>(endpoint: string, timeoutMs?: number): Promise<T> => {
     return fetchWithTimeout<T>(
-      `${API_BASE_URL}${endpoint}`,
+      buildApiUrl(endpoint),
       {
         method: 'DELETE',
       },

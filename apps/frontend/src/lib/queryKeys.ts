@@ -45,6 +45,7 @@ export const borrowerKeys = {
 // Story 5.2: Auth query keys for admin authentication
 export const authKeys = {
   all: ['auth'] as const,
+  config: () => [...authKeys.all, 'config'] as const,
   session: () => [...authKeys.all, 'session'] as const,
 };
 
