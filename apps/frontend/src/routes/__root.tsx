@@ -6,21 +6,27 @@ import { queryClient } from '@/lib/queryClient'
 import { checkSetupStatus } from '@/api/setup'
 import { setupKeys } from '@/lib/queryKeys'
 import { tokenStorage } from '@/lib/tokenStorage'
+import { isChunkLoadError } from '@/lib/chunk-load-recovery'
 
 // Error Fallback für Route-Fehler
 function RootErrorComponent({ error }: { error: Error }) {
+  const isStaleChunkError = isChunkLoadError(error)
+  const errorMessage = isStaleChunkError
+    ? 'Die Anwendung wurde im Hintergrund aktualisiert. Bitte laden Sie die Seite neu, damit die aktuelle Version geladen wird.'
+    : error.message || 'Ein unerwarteter Fehler ist aufgetreten.'
+
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-destructive mb-2">Fehler</h1>
         <p className="text-muted-foreground mb-4">
-          {error.message || 'Ein unerwarteter Fehler ist aufgetreten.'}
+          {errorMessage}
         </p>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
-          Seite neu laden
+          {isStaleChunkError ? 'Aktuelle Version laden' : 'Seite neu laden'}
         </button>
       </div>
     </div>
