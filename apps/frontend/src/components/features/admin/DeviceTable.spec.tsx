@@ -20,6 +20,19 @@ vi.mock('@/api/admin-devices', () => ({
 // Mock StatusBadge component
 vi.mock('@/components/features/StatusBadge', () => ({
   StatusBadge: ({ status }: { status: string }) => <span data-testid="status-badge">{status}</span>,
+  getDeviceStatusMeta: (status: string) => ({
+    label:
+      status === 'AVAILABLE'
+        ? 'Verfügbar'
+        : status === 'DEFECT'
+          ? 'Defekt'
+          : status === 'MAINTENANCE'
+            ? 'Wartung'
+            : 'Ausgeliehen',
+    icon: () => null,
+    badgeClassName: '',
+    indicatorClassName: '',
+  }),
 }));
 
 // Mock shadcn/ui components
@@ -263,7 +276,7 @@ describe('DeviceTable', () => {
   });
 
   describe('Status Badge Display', () => {
-    it('renders status badge for each device', () => {
+    it('renders a badge only for ON_LOAN devices', () => {
       render(
         <DeviceTable
           devices={mockDevices}
@@ -276,7 +289,7 @@ describe('DeviceTable', () => {
       );
 
       const badges = screen.getAllByTestId('status-badge');
-      expect(badges).toHaveLength(3);
+      expect(badges).toHaveLength(1);
     });
 
     it('shows status badge only (no dropdown) for ON_LOAN devices', () => {
@@ -291,9 +304,10 @@ describe('DeviceTable', () => {
         />
       );
 
-      // Device 2 is ON_LOAN - should have badge but no select
-      const badges = screen.getAllByTestId('status-badge');
-      expect(badges[1]).toHaveTextContent('ON_LOAN');
+      const onLoanRow = screen.getByText('Florian 4-22').closest('tr');
+      expect(onLoanRow).not.toBeNull();
+      expect(within(onLoanRow!).getByTestId('status-badge')).toHaveTextContent('ON_LOAN');
+      expect(within(onLoanRow!).queryByTestId('select')).not.toBeInTheDocument();
     });
 
     it('shows status dropdown for AVAILABLE devices', () => {
@@ -362,7 +376,7 @@ describe('DeviceTable', () => {
       expect(deleteButtons).toHaveLength(3);
     });
 
-    it('delete button is disabled for ON_LOAN devices', () => {
+    it('delete button remains enabled for ON_LOAN devices', () => {
       render(
         <DeviceTable
           devices={mockDevices}
@@ -376,7 +390,7 @@ describe('DeviceTable', () => {
 
       const deleteButtons = screen.getAllByLabelText(/löschen/i);
       // Device 2 (index 1) is ON_LOAN
-      expect(deleteButtons[1]).toBeDisabled();
+      expect(deleteButtons[1]).not.toBeDisabled();
     });
 
     it('delete button is enabled for AVAILABLE devices', () => {
@@ -451,7 +465,7 @@ describe('DeviceTable', () => {
       expect(mockOnDelete).toHaveBeenCalledWith(mockDevices[0]);
     });
 
-    it('shows tooltip for disabled delete button on ON_LOAN device', () => {
+    it('does not render an inline delete tooltip for ON_LOAN device', () => {
       render(
         <DeviceTable
           devices={mockDevices}
@@ -463,8 +477,7 @@ describe('DeviceTable', () => {
         />
       );
 
-      // Tooltip should be present for ON_LOAN device
-      expect(screen.getByText('Ausgeliehenes Gerät kann nicht gelöscht werden')).toBeInTheDocument();
+      expect(screen.queryByText('Ausgeliehenes Gerät kann nicht gelöscht werden')).not.toBeInTheDocument();
     });
 
     it('edit button is disabled during isFetching', () => {
@@ -518,7 +531,7 @@ describe('DeviceTable', () => {
       );
 
       // Check that options are rendered
-      expect(screen.getByText('Verfügbar')).toBeInTheDocument();
+      expect(screen.getAllByText('Verfügbar').length).toBeGreaterThan(0);
       expect(screen.getByText('Defekt')).toBeInTheDocument();
       expect(screen.getByText('Wartung')).toBeInTheDocument();
     });
@@ -600,7 +613,7 @@ describe('DeviceTable', () => {
       expect(selectTrigger).toHaveAttribute('aria-label', 'Status ändern für Florian 4-21');
     });
 
-    it('status dropdown has touch-optimized height', () => {
+    it('status dropdown has compact trigger height', () => {
       render(
         <DeviceTable
           devices={[mockDevices[0]!]}
@@ -613,7 +626,7 @@ describe('DeviceTable', () => {
       );
 
       const selectTrigger = screen.getByTestId('select-trigger');
-      expect(selectTrigger).toHaveClass('min-h-16'); // 64px
+      expect(selectTrigger).toHaveClass('h-11');
     });
 
     it('status dropdown options have touch-optimized height', () => {
@@ -1373,7 +1386,7 @@ describe('DeviceTable', () => {
       const rows = container.querySelectorAll('tbody tr');
       const firstRow = rows[0];
       const cells = firstRow?.querySelectorAll('td');
-      expect(cells).toHaveLength(5); // 5 columns
+      expect(cells).toHaveLength(6); // 6 columns incl. actions
     });
 
     it('does not show device rows when loading', () => {

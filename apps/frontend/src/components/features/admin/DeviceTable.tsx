@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { StatusBadge } from '@/components/features/StatusBadge';
+import { getDeviceStatusMeta, StatusBadge } from '@/components/features/StatusBadge';
 import {
   useUpdateDeviceStatus,
   ADMIN_DEVICE_STATUS_OPTIONS,
@@ -20,6 +20,7 @@ import {
 import { Pencil, Trash2, Plus, Radio, Loader2 } from 'lucide-react';
 import { sanitizeForDisplay } from '@/lib/sanitize';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DeviceTableProps {
   devices: Device[];
@@ -37,6 +38,30 @@ interface DeviceTableRowProps {
   onStatusChange: (deviceId: string, deviceName: string, newStatus: AdminDeviceStatus) => void;
   onEdit: (device: Device) => void;
   onDelete: (device: Device) => void;
+}
+
+interface StatusSelectDisplayProps {
+  status: AdminDeviceStatus;
+}
+
+function StatusSelectDisplay({ status }: StatusSelectDisplayProps) {
+  const config = getDeviceStatusMeta(status);
+  const Icon = config.icon;
+
+  return (
+    <span className="flex min-w-0 items-center gap-2.5">
+      <span
+        className={cn(
+          'flex size-7 shrink-0 items-center justify-center rounded-full border transition-colors',
+          config.indicatorClassName,
+        )}
+        aria-hidden="true"
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <span className="truncate font-medium text-foreground">{config.label}</span>
+    </span>
+  );
 }
 
 /**
@@ -102,8 +127,7 @@ const DeviceTableRow = memo(function DeviceTableRow({
           <StatusBadge status={device.status} />
         ) : (
           /* AC2: Status dropdown for AVAILABLE, DEFECT, MAINTENANCE */
-          /* MEDIUM FIX #31: gap-2 (8px) → gap-4 (16px) for optimal touch spacing */
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {isUpdating && (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
             )}
@@ -113,19 +137,24 @@ const DeviceTableRow = memo(function DeviceTableRow({
               disabled={isStatusDisabled}
             >
               <SelectTrigger
-                className="w-[140px] min-h-16"
+                className="h-11 w-[168px] rounded-xl border-border/70 bg-background px-3 shadow-xs hover:bg-muted/20"
                 aria-label={`Status ändern für ${sanitizedCallSign}`}
                 aria-disabled={isStatusDisabled}
                 aria-busy={isUpdating}
               >
                 <SelectValue>
-                  <StatusBadge status={device.status} />
+                  <StatusSelectDisplay status={device.status} />
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-[168px] rounded-xl border-border/70 p-1 shadow-lg">
                 {ADMIN_DEVICE_STATUS_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value} className="min-h-16">
-                    {option.label}
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    textValue={option.label}
+                    className="min-h-11 rounded-lg px-3 py-2 pr-9"
+                  >
+                    <StatusSelectDisplay status={option.value} />
                   </SelectItem>
                 ))}
               </SelectContent>
