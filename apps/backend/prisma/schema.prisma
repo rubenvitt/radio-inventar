@@ -9,39 +9,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum DeviceStatus {
-  AVAILABLE
-  ON_LOAN
-  DEFECT
-  MAINTENANCE
-}
-
-model Device {
-  id           String       @id @default(cuid())
-  callSign     String       @unique @db.VarChar(50)
-  serialNumber String?      @db.VarChar(100)
-  deviceType   String       @db.VarChar(100)
-  status       DeviceStatus @default(AVAILABLE)
-  notes        String?      @db.VarChar(500)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  loans        Loan[]
-
-  @@index([status])
-}
-
+// Devices are no longer stored locally — they are the master data of radio-admin
+// and fetched read-only via RadioAdminService. A loan keeps an immutable SNAPSHOT
+// of the device's display fields so history/CSV stay self-contained and correct
+// even when the device is renamed, set loanable=false, or radio-admin is offline.
+// `deviceId` references radio-admin's immutable cuid2 id (no FK constraint).
+//
+// DeviceStatus (AVAILABLE/ON_LOAN/DEFECT/MAINTENANCE) is no longer a stored enum:
+// availability is derived from active loans, condition from radio-admin's status.
 model Loan {
-  id           String    @id @default(cuid())
-  deviceId     String    @db.VarChar(25)
-  device       Device    @relation(fields: [deviceId], references: [id])
-  borrowerName String    @db.VarChar(100)
-  borrowedAt   DateTime  @default(now())
-  returnedAt   DateTime?
-  returnNote   String?   @db.VarChar(500)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  deviceId             String    @db.VarChar(25)
+  // Snapshots are stored as TEXT (no length cap): the radio-admin source fields
+  // (rufname/serialNumber/deviceType) are unbounded SQLite text, so a VARCHAR cap
+  // here would 22001-overflow on a long value and make the device unborrowable.
+  snapshotCallSign     String
+  snapshotSerialNumber String?
+  snapshotDeviceType   String?
+  borrowerName         String    @db.VarChar(100)
+  borrowedAt           DateTime  @default(now())
+  returnedAt           DateTime?
+  returnNote           String?   @db.VarChar(500)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-
+  // NOTE: a partial unique index `loans_device_active_uidx` ON ("deviceId")
+  // WHERE "returnedAt" IS NULL is added by hand in the migration SQL (Prisma
+  // cannot express partial indexes). It guarantees at most one active loan per
+  // device — the atomic race guard that replaces the old Device.status CAS.
   @@index([deviceId])
   @@index([borrowerName])
   @@index([borrowedAt])
