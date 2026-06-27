@@ -70,6 +70,9 @@ export { germanErrorMap } from './lib/zod-error-map.js';
 // Device schemas and types
 export * from './schemas/device.schema.js';
 
+// radio-admin loan-device contract (read-only device source) and status mapping
+export * from './schemas/radio-admin-device.schema.js';
+
 // Admin schemas and types
 export * from './schemas/admin.schema.js';
 

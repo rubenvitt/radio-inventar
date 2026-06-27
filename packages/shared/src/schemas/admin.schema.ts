@@ -68,7 +68,9 @@ export const DashboardStatsSchema = z.object({
  * Used for validating query parameters for GET /api/admin/history
  */
 export const HistoryFiltersSchema = z.object({
-  deviceId: z.string().cuid().optional(), // Using cuid (v1)
+  // Device ids now come from radio-admin (cuid2, may not start with 'c'); accept
+  // any non-empty string rather than the stricter cuid (v1) format.
+  deviceId: z.string().min(1).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
@@ -90,9 +92,10 @@ export const HistoryFiltersSchema = z.object({
  * Represents a single loan record in the history
  */
 export const HistoryItemSchema = z.object({
-  id: z.string().cuid(), // Using cuid (v1)
+  id: z.string().cuid(), // Loan id — Prisma cuid (v1)
   device: z.object({
-    id: z.string().cuid(),
+    // Device id from radio-admin (cuid2); accept any non-empty string.
+    id: z.string().min(1),
     callSign: z.string(),
     serialNumber: z.string().nullable(), // Story 6.4: Required for CSV export (AC3)
     deviceType: z.string(),
