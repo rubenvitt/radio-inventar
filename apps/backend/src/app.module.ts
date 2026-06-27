@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { SentryModule } from '@sentry/nestjs/setup';
 import { validateEnv } from './config/env.config';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { RadioAdminModule } from './modules/radio-admin/radio-admin.module';
@@ -18,7 +17,6 @@ import { ApiTokenGuard } from './common/guards/api-token.guard';
 
 @Module({
   imports: [
-    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,

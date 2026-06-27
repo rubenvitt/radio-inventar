@@ -10,8 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org rubeen --project radio-backend ./dist && sentry-cli --url https://sentry.rubeen.dev/ sourcemaps upload --org rubeen --project radio-backend ./dist"
+    "test:cov": "jest --coverage"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.16",
@@ -22,9 +21,6 @@
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.2",
     "@radio-inventar/shared": "workspace:*",
-    "@sentry/cli": "^3.3.3",
-    "@sentry/nestjs": "^10.43.0",
-    "@sentry/profiling-node": "^10.43.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
