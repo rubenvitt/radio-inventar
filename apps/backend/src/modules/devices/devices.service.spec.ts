@@ -1,87 +1,102 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DevicesService } from './devices.service';
-import { DevicesRepository } from './devices.repository';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
+
+function raDevice(over: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'id-1',
+    issi: '1001',
+    opta: null,
+    rufname: 'Florian 4-21',
+    status: 'Einsatzbereit',
+    location: null,
+    deviceType: 'Handheld',
+    serialNumber: 'SN-001',
+    hersteller: null,
+    bedieneinheit: null,
+    funktion: null,
+    ...over,
+  };
+}
 
 describe('DevicesService', () => {
   let service: DevicesService;
-  let repository: jest.Mocked<DevicesRepository>;
-
-  const mockDate = new Date('2025-01-15T10:30:00Z');
-
-  const mockDevices = [
-    {
-      id: 'cuid1234567890abcdefghij',
-      callSign: 'Florian 4-21',
-      serialNumber: 'SN-001',
-      deviceType: 'Handheld',
-      status: 'AVAILABLE' as const,
-      notes: 'Neues Gerät',
-      createdAt: mockDate,
-      updatedAt: mockDate,
-    },
-  ];
+  let radioAdmin: { fetchLoanableDevices: jest.Mock };
+  let prisma: { loan: { findMany: jest.Mock } };
 
   beforeEach(async () => {
-    const mockRepository = {
-      findAll: jest.fn(),
-    };
+    radioAdmin = { fetchLoanableDevices: jest.fn() };
+    prisma = { loan: { findMany: jest.fn().mockResolvedValue([]) } };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DevicesService,
-        { provide: DevicesRepository, useValue: mockRepository },
+        { provide: RadioAdminService, useValue: radioAdmin },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     service = module.get<DevicesService>(DevicesService);
-    repository = module.get(DevicesRepository);
   });
 
-  describe('findAll', () => {
-    it('should delegate to repository with empty options', async () => {
-      repository.findAll.mockResolvedValue(mockDevices);
+  it('composes devices from radio-admin with AVAILABLE when no active loan', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([raDevice()]);
 
-      const result = await service.findAll();
+    const result = await service.findAll();
 
-      expect(result).toEqual(mockDevices);
-      expect(repository.findAll).toHaveBeenCalledWith({});
-      expect(repository.findAll).toHaveBeenCalledTimes(1);
-    });
+    expect(result).toEqual([
+      { id: 'id-1', callSign: 'Florian 4-21', serialNumber: 'SN-001', deviceType: 'Handheld', status: 'AVAILABLE' },
+    ]);
+  });
 
-    it('should delegate to repository with status filter', async () => {
-      repository.findAll.mockResolvedValue([]);
+  it('overlays ON_LOAN for devices with an active local loan', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([raDevice({ id: 'id-1' }), raDevice({ id: 'id-2', rufname: 'B' })]);
+    prisma.loan.findMany.mockResolvedValue([{ deviceId: 'id-2' }]);
 
-      await service.findAll({ status: 'AVAILABLE' });
+    const result = await service.findAll();
 
-      expect(repository.findAll).toHaveBeenCalledWith({ status: 'AVAILABLE' });
-      expect(repository.findAll).toHaveBeenCalledTimes(1);
-    });
+    expect(result.find((d) => d.id === 'id-1')!.status).toBe('AVAILABLE');
+    expect(result.find((d) => d.id === 'id-2')!.status).toBe('ON_LOAN');
+  });
 
-    it('should delegate to repository with pagination options', async () => {
-      repository.findAll.mockResolvedValue([]);
+  it('maps radio-admin condition to DEFECT / MAINTENANCE', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([
+      raDevice({ id: 'd', rufname: 'D', status: 'Defekt' }),
+      raDevice({ id: 'w', rufname: 'W', status: 'Wartung' }),
+    ]);
 
-      await service.findAll({ take: 50, skip: 10 });
+    const result = await service.findAll();
+    expect(result.find((d) => d.id === 'd')!.status).toBe('DEFECT');
+    expect(result.find((d) => d.id === 'w')!.status).toBe('MAINTENANCE');
+  });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ take: 50, skip: 10 });
-      expect(repository.findAll).toHaveBeenCalledTimes(1);
-    });
+  it('falls back to issi when rufname is null', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([raDevice({ rufname: null, issi: '9999' })]);
+    const result = await service.findAll();
+    expect(result[0].callSign).toBe('9999');
+  });
 
-    it('should delegate to repository with all options', async () => {
-      repository.findAll.mockResolvedValue([]);
+  it('filters by status', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([
+      raDevice({ id: 'a', rufname: 'A' }),
+      raDevice({ id: 'd', rufname: 'D', status: 'Defekt' }),
+    ]);
 
-      await service.findAll({ status: 'ON_LOAN', take: 25, skip: 5 });
+    const result = await service.findAll({ status: 'DEFECT' });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('d');
+  });
 
-      expect(repository.findAll).toHaveBeenCalledWith({ status: 'ON_LOAN', take: 25, skip: 5 });
-      expect(repository.findAll).toHaveBeenCalledTimes(1);
-    });
+  it('applies take/skip pagination', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([
+      raDevice({ id: '1', rufname: 'A' }),
+      raDevice({ id: '2', rufname: 'B' }),
+      raDevice({ id: '3', rufname: 'C' }),
+    ]);
 
-    it('should return devices with notes field', async () => {
-      repository.findAll.mockResolvedValue(mockDevices);
-
-      const result = await service.findAll();
-
-      expect(result[0]).toHaveProperty('notes');
-      expect(result[0].notes).toBe('Neues Gerät');
-    });
+    const result = await service.findAll({ take: 1, skip: 1 });
+    expect(result).toHaveLength(1);
+    expect(result[0].callSign).toBe('B');
   });
 });
