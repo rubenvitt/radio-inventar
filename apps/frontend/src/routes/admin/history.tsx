@@ -25,7 +25,7 @@ import { RefreshCw, AlertCircle } from 'lucide-react';
 const historySearchSchema = z.object({
   page: z.coerce.number().int().positive().optional().catch(1),
   pageSize: z.coerce.number().int().min(1).max(1000).optional().catch(100),
-  deviceId: z.string().cuid().optional().catch(undefined),
+  deviceId: z.string().min(1).optional().catch(undefined),
   from: z.string().datetime().optional().catch(undefined),
   to: z.string().datetime().optional().catch(undefined),
 });

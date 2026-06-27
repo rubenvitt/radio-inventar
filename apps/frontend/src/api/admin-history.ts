@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { z } from 'zod';
 import {
   HistoryResponseSchema,
   type HistoryFilters,
@@ -11,6 +10,7 @@ import {
   type HistoryItem,
 } from '@radio-inventar/shared';
 import { apiClient, ApiError } from './client';
+import { fetchAdminDevices } from './admin-devices';
 // [AI-Review Fix] HIGH: Import HistoryQueryFilters from queryKeys.ts to avoid type duplication (DRY)
 import { adminHistoryKeys, adminDeviceKeys, type HistoryQueryFilters } from '@/lib/queryKeys';
 
@@ -143,44 +143,9 @@ export async function fetchAdminHistory(filters?: HistoryQueryFilters): Promise<
   return validated.data;
 }
 
-/**
- * Zod schema for device filter options response validation
- * [AI-Review Fix] CRITICAL: Added Zod validation for runtime safety
- */
-const DevicesFilterResponseSchema = z.object({
-  data: z.array(z.object({
-    id: z.string().cuid(),
-    callSign: z.string(),
-    deviceType: z.string(),
-    status: z.string(),
-  })),
-});
-
-/**
- * Fetch device list for filter dropdown (Task 1.5)
- * Reuses admin devices endpoint to get device options
- * GET /api/admin/devices
- * [AI-Review Fix] CRITICAL: Added Zod validation for response
- */
-export async function fetchDevicesForFilter(): Promise<DeviceOption[]> {
-  const response = await apiClient.get<unknown>('/api/admin/devices');
-
-  // [AI-Review Fix] CRITICAL: Validate response with Zod schema
-  const validated = DevicesFilterResponseSchema.safeParse(response);
-
-  if (!validated.success) {
-    if (import.meta.env.DEV) {
-      console.error('Devices response validation error:', validated.error);
-    }
-    throw new Error('Invalid device list response from server');
-  }
-
-  // Transform to simple options for dropdown
-  return validated.data.data.map(device => ({
-    id: device.id,
-    callSign: device.callSign,
-  }));
-}
+// The device-filter dropdown reuses the admin device list (fetchAdminDevices) so
+// it shares the SAME query (key + return shape) as useAdminDevices — avoiding a
+// cache-key collision — and projects to {id, callSign} via React Query `select`.
 
 // === REACT QUERY HOOKS (Task 1.3) ===
 
@@ -223,7 +188,10 @@ export function useDevicesForFilter() {
 
   const query = useQuery({
     queryKey: adminDeviceKeys.list(undefined),
-    queryFn: fetchDevicesForFilter,
+    // Same queryFn + shape as useAdminDevices() so the shared cache slot never
+    // holds two different shapes; project to {id, callSign} per-observer.
+    queryFn: () => fetchAdminDevices(undefined),
+    select: (devices): DeviceOption[] => devices.map((d) => ({ id: d.id, callSign: d.callSign })),
     staleTime: DEVICE_FILTER_CACHE_TIME_MS,
     retry: retryWithBackoff,
     retryDelay,

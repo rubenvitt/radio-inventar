@@ -10,7 +10,7 @@ import type { DeviceWithLoanInfo } from '@/api/devices'
  * Removes potentially dangerous characters while preserving normal text.
  * Defense-in-depth: Handles HTML injection, attribute escaping, unicode attacks.
  */
-function sanitizeForDisplay(text: string | undefined): string {
+function sanitizeForDisplay(text: string | null | undefined): string {
   if (!text) return '';
   return text
     .replace(/[<>]/g, '')                         // Remove < and > to prevent HTML injection
@@ -50,11 +50,6 @@ function DeviceCardComponent({ device, onSelect, disabled, className }: DeviceCa
             <p className="text-sm text-muted-foreground mt-0.5">
               {sanitizeForDisplay(device.deviceType)}
             </p>
-            {device.notes && (
-              <p className="text-sm text-muted-foreground/80 mt-1 line-clamp-2">
-                {sanitizeForDisplay(device.notes)}
-              </p>
-            )}
           </div>
           <StatusBadge status={device.status} showLabel />
         </div>
@@ -99,7 +94,6 @@ function arePropsEqual(
     prevProps.device.id === nextProps.device.id &&
     prevProps.device.callSign === nextProps.device.callSign &&
     prevProps.device.deviceType === nextProps.device.deviceType &&
-    prevProps.device.notes === nextProps.device.notes &&
     prevProps.device.status === nextProps.device.status &&
     prevProps.device.borrowerName === nextProps.device.borrowerName &&
     prevProps.device.borrowedAt?.getTime() === nextProps.device.borrowedAt?.getTime() &&
