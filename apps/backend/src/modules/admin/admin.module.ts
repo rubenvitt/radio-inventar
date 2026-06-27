@@ -5,19 +5,20 @@ import { AuthRepository } from './auth/auth.repository';
 import { PocketIdService } from './auth/pocket-id.service';
 import { AdminDevicesController } from './devices/admin-devices.controller';
 import { AdminDevicesService } from './devices/admin-devices.service';
-import { AdminDevicesRepository } from './devices/admin-devices.repository';
 import { PrintTemplateService } from './services/print-template.service';
 import { HistoryModule } from './history/history.module';
+import { DevicesModule } from '../devices/devices.module';
 
 @Module({
-  imports: [HistoryModule], // Story 6.1: Dashboard & History endpoints
+  // DevicesModule provides the shared (read-only) DevicesService used by the
+  // admin device view; HistoryModule adds the dashboard & history endpoints.
+  imports: [HistoryModule, DevicesModule],
   controllers: [AuthController, AdminDevicesController],
   providers: [
     AuthService,
     AuthRepository,
     PocketIdService,
     AdminDevicesService,
-    AdminDevicesRepository,
     PrintTemplateService, // Story 6.5: PDF print template generation
   ],
   exports: [AuthService],
