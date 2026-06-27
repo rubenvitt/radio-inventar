@@ -68,6 +68,13 @@ jobs:
 
       - name: Build Backend
         run: pnpm --filter @radio-inventar/backend build
+
+      # Sourcemap upload to the self-hosted Sentry is best-effort: it must never
+      # gate the build. If sentry.rubeen.dev is unreachable or misconfigured,
+      # the pipeline stays green (continue-on-error).
+      - name: Upload Backend Sourcemaps to Sentry
+        run: pnpm --filter @radio-inventar/backend sentry:sourcemaps
+        continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
