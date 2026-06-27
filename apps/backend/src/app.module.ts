@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { validateEnv } from './config/env.config';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { RadioAdminModule } from './modules/radio-admin/radio-admin.module';
 import { HealthModule } from './modules/health/health.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { LoansModule } from './modules/loans/loans.module';
@@ -23,6 +24,7 @@ import { ApiTokenGuard } from './common/guards/api-token.guard';
       validate: validateEnv,
     }),
     PrismaModule,
+    RadioAdminModule,
     HealthModule,
     DevicesModule,
     LoansModule,
