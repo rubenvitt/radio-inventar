@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import type { HistoryFilters } from '@radio-inventar/shared';
+import { mapRadioAdminStatus, type HistoryFilters } from '@radio-inventar/shared';
+import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
 
 /**
  * Dashboard Statistics Return Type
@@ -30,7 +31,9 @@ export interface DashboardStatsResult {
 
 /**
  * History Query Result Type
- * Matches HistoryItemSchema from @radio-inventar/shared (before serialization)
+ * Matches HistoryItemSchema from @radio-inventar/shared (before serialization).
+ * The `device` object is rebuilt from the loan's immutable snapshot fields — no
+ * JOIN against a local device table (devices live in radio-admin).
  */
 export interface HistoryResult {
   data: Array<{
@@ -38,7 +41,7 @@ export interface HistoryResult {
     device: {
       id: string;
       callSign: string;
-      serialNumber: string | null; // Story 6.4: Required for CSV export (AC3)
+      serialNumber: string | null;
       deviceType: string;
       status: string;
     };
@@ -56,35 +59,33 @@ const HISTORY_RETENTION_MONTHS = 2;
 export class HistoryRepository {
   private readonly logger = new Logger(HistoryRepository.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly radioAdminService: RadioAdminService,
+  ) {}
 
   private getHistoryRetentionCutoff(referenceDate: Date = new Date()): Date {
     const cutoff = new Date(referenceDate);
     cutoff.setUTCMonth(cutoff.getUTCMonth() - HISTORY_RETENTION_MONTHS);
-
     return cutoff;
   }
 
   private async deleteExpiredHistoryEntries(): Promise<void> {
     const cutoffDate = this.getHistoryRetentionCutoff();
-
     try {
       const result = await this.prisma.loan.deleteMany({
         where: {
           // Keep active loans (returnedAt === null) so ongoing rentals stay visible.
-          returnedAt: {
-            not: null,
-            lt: cutoffDate,
-          },
+          returnedAt: { not: null, lt: cutoffDate },
         },
       });
-
       if (result.count > 0) {
-        this.logger.debug(`Deleted ${result.count} expired history entries older than ${HISTORY_RETENTION_MONTHS} months`);
+        this.logger.debug(
+          `Deleted ${result.count} expired history entries older than ${HISTORY_RETENTION_MONTHS} months`,
+        );
       }
     } catch (error: unknown) {
-      // Cleanup should not block dashboard/history reads.
-      // Log the issue and continue so users still can access current data.
+      // Cleanup must not block dashboard/history reads.
       this.logger.error(
         'Failed to delete expired history entries:',
         error instanceof Error ? error.message : error,
@@ -93,102 +94,91 @@ export class HistoryRepository {
   }
 
   /**
-   * Get dashboard statistics and active loans
-   *
-   * @returns Dashboard stats with device counts and up to 50 active loans
-   * @throws {HttpException} On database errors (500) or timeout (408)
-   *
-   * Performance: Uses parallel COUNT queries and transaction with 10s timeout
-   * Indexes used: Device.status, Loan.returnedAt, Loan.borrowedAt
+   * Dashboard statistics. Availability counts come from radio-admin's device
+   * list (best-effort: on an outage the condition counts degrade to 0, logged),
+   * while onLoanCount and the active-loans list are always derived locally.
    */
   async getDashboardStats(): Promise<DashboardStatsResult> {
-    this.logger.debug('Fetching dashboard statistics');
-
     try {
       await this.deleteExpiredHistoryEntries();
 
-      return await this.prisma.$transaction(async (tx) => {
-        // Parallel COUNT queries for all device statuses (4x faster than sequential)
-        const [availableCount, onLoanCount, defectCount, maintenanceCount] =
-          await Promise.all([
-            tx.device.count({ where: { status: 'AVAILABLE' } }),
-            tx.device.count({ where: { status: 'ON_LOAN' } }),
-            tx.device.count({ where: { status: 'DEFECT' } }),
-            tx.device.count({ where: { status: 'MAINTENANCE' } }),
-          ]);
+      // Every active loan is a distinct device (partial unique index), so the
+      // active-loan rows are the single source of truth for "on loan".
+      const activeLoans = await this.prisma.loan.findMany({
+        where: { returnedAt: null },
+        select: {
+          id: true,
+          deviceId: true,
+          borrowerName: true,
+          borrowedAt: true,
+          snapshotCallSign: true,
+          snapshotDeviceType: true,
+        },
+        orderBy: { borrowedAt: 'desc' },
+      });
+      const onLoanCount = activeLoans.length;
+      const activeDeviceIds = new Set(activeLoans.map((loan) => loan.deviceId));
 
-        // Active loans (returnedAt = null) limited to 50, ordered by most recent
-        // Uses returnedAt and borrowedAt indexes for performance
-        const activeLoans = await tx.loan.findMany({
-          where: { returnedAt: null },
-          select: {
-            id: true,
-            borrowerName: true,
-            borrowedAt: true,
-            device: {
-              select: {
-                callSign: true,
-                deviceType: true,
-              }
-            }
-          },
-          orderBy: { borrowedAt: 'desc' },
-          take: 50, // Enforce 50 limit (AC2)
-        });
-
-        this.logger.debug(`Dashboard stats: ${availableCount} available, ${onLoanCount} on loan, ${defectCount} defect, ${maintenanceCount} maintenance, ${activeLoans.length} active loans`);
-
-        return {
-          availableCount,
-          onLoanCount,
-          defectCount,
-          maintenanceCount,
-          activeLoans,
-        };
-      }, { timeout: 10000 }); // 10s timeout
-    } catch (error: unknown) {
-      // Handle Prisma timeout
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2024') {
-          this.logger.error('Dashboard stats query timeout');
-          throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
+      let availableCount = 0;
+      let defectCount = 0;
+      let maintenanceCount = 0;
+      try {
+        const devices = await this.radioAdminService.fetchLoanableDevices();
+        for (const device of devices) {
+          if (activeDeviceIds.has(device.id)) continue; // already counted as on loan
+          const status = mapRadioAdminStatus(device.status, false);
+          if (status === 'DEFECT') defectCount += 1;
+          else if (status === 'MAINTENANCE') maintenanceCount += 1;
+          else availableCount += 1;
         }
+      } catch {
+        this.logger.warn(
+          'radio-admin unreachable; device condition counts unavailable (showing 0)',
+        );
       }
 
-      // Log and throw generic error
-      this.logger.error('Failed to fetch dashboard stats:', error instanceof Error ? error.message : error);
+      return {
+        availableCount,
+        onLoanCount,
+        defectCount,
+        maintenanceCount,
+        activeLoans: activeLoans.slice(0, 50).map((loan) => ({
+          id: loan.id,
+          device: {
+            callSign: loan.snapshotCallSign,
+            deviceType: loan.snapshotDeviceType ?? '',
+          },
+          borrowerName: loan.borrowerName,
+          borrowedAt: loan.borrowedAt,
+        })),
+      };
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024') {
+        this.logger.error('Dashboard stats query timeout');
+        throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
+      }
+      this.logger.error(
+        'Failed to fetch dashboard stats:',
+        error instanceof Error ? error.message : error,
+      );
       throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   /**
-   * Get paginated loan history with optional filters
-   *
-   * @param filters - Query filters (deviceId, from, to, page, pageSize)
-   * @returns Paginated history data and total count
-   * @throws {HttpException} On database errors (500) or timeout (408)
-   *
-   * Performance: Uses borrowedAt index for sorting and date filters
-   * Pagination: Default 100 items, max 1000 items per page
+   * Paginated loan history. The device sub-object is reconstructed from each
+   * loan's snapshot — historically accurate and independent of radio-admin.
    */
   async getHistory(filters: HistoryFilters): Promise<HistoryResult> {
     const { deviceId, from, to, page = 1, pageSize = 100 } = filters;
 
-    this.logger.debug(`Fetching history: page=${page}, pageSize=${pageSize}, deviceId=${deviceId || 'all'}, from=${from || 'none'}, to=${to || 'none'}`);
-
     try {
       await this.deleteExpiredHistoryEntries();
 
-      // Build dynamic WHERE clause
       const where: Prisma.LoanWhereInput = {};
-
-      // Filter by deviceId (AC4)
       if (deviceId) {
         where.deviceId = deviceId;
       }
-
-      // Filter by date range (AC5)
-      // Uses spread operator pattern for conditional filters
       if (from || to) {
         where.borrowedAt = {
           ...(from && { gte: new Date(from) }),
@@ -196,50 +186,52 @@ export class HistoryRepository {
         };
       }
 
-      // Pagination calculation
       const skip = (page - 1) * pageSize;
       const take = pageSize;
 
-      // Parallel data + count queries (faster than sequential)
-      const [data, total] = await Promise.all([
+      const [rows, total] = await Promise.all([
         this.prisma.loan.findMany({
           where,
           select: {
             id: true,
+            deviceId: true,
             borrowerName: true,
             borrowedAt: true,
             returnedAt: true,
             returnNote: true,
-            device: {
-              select: {
-                id: true,
-                callSign: true,
-                serialNumber: true, // Story 6.4: Required for CSV export (AC3)
-                deviceType: true,
-                status: true,
-              }
-            }
+            snapshotCallSign: true,
+            snapshotSerialNumber: true,
+            snapshotDeviceType: true,
           },
-          orderBy: { borrowedAt: 'desc' }, // Most recent first (AC3)
+          orderBy: { borrowedAt: 'desc' },
           skip,
           take,
         }),
         this.prisma.loan.count({ where }),
       ]);
 
-      this.logger.debug(`History query returned ${data.length} items (total: ${total})`);
+      const data = rows.map((loan) => ({
+        id: loan.id,
+        device: {
+          id: loan.deviceId,
+          callSign: loan.snapshotCallSign,
+          serialNumber: loan.snapshotSerialNumber,
+          deviceType: loan.snapshotDeviceType ?? '',
+          // Deterministic from the loan itself — no live device lookup.
+          status: loan.returnedAt ? 'AVAILABLE' : 'ON_LOAN',
+        },
+        borrowerName: loan.borrowerName,
+        borrowedAt: loan.borrowedAt,
+        returnedAt: loan.returnedAt,
+        returnNote: loan.returnNote,
+      }));
 
       return { data, total };
     } catch (error: unknown) {
-      // Handle Prisma timeout
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2024') {
-          this.logger.error('History query timeout');
-          throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
-        }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024') {
+        this.logger.error('History query timeout');
+        throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
       }
-
-      // Log and throw generic error
       this.logger.error('Failed to fetch history:', error instanceof Error ? error.message : error);
       throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }

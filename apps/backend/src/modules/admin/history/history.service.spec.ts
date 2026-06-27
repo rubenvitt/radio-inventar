@@ -226,10 +226,15 @@ describe('HistoryService', () => {
       });
     });
 
-    it('should reject invalid deviceId (non-CUID format)', async () => {
-      await expect(service.getHistory({
-        deviceId: 'invalid-id',
-      })).rejects.toThrow(BadRequestException);
+    it('accepts a radio-admin device id (cuid2, not cuid v1)', async () => {
+      repository.getHistory.mockResolvedValue(mockHistoryResult);
+      await expect(
+        service.getHistory({ deviceId: 'we3hm7h7pio2ddufaockc09j' }),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects an empty deviceId', async () => {
+      await expect(service.getHistory({ deviceId: '' })).rejects.toThrow(BadRequestException);
     });
 
     it('should reject invalid date format (non-ISO)', async () => {
