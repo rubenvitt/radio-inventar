@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import {
   fetchAdminHistory,
-  fetchDevicesForFilter,
   useAdminHistory,
   useDevicesForFilter,
   getHistoryErrorMessage,
@@ -84,8 +83,8 @@ const mockHistoryResponse = {
 
 const mockDevicesResponse = {
   data: [
-    { id: 'clx1111111111111111111111111', callSign: 'Florian 1', deviceType: 'Radio', status: 'AVAILABLE' },
-    { id: 'clx2222222222222222222222222', callSign: 'Florian 2', deviceType: 'Radio', status: 'ON_LOAN' },
+    { id: 'clx1111111111111111111111111', callSign: 'Florian 1', serialNumber: null, deviceType: 'Radio', status: 'AVAILABLE' },
+    { id: 'clx2222222222222222222222222', callSign: 'Florian 2', serialNumber: null, deviceType: 'Radio', status: 'ON_LOAN' },
   ],
 };
 
@@ -318,26 +317,6 @@ describe('admin-history API', () => {
 
       // Verify NO redirect for 500 errors
       expect(mockNavigate).not.toHaveBeenCalled();
-    });
-  });
-
-  // === fetchDevicesForFilter Tests ===
-  describe('fetchDevicesForFilter', () => {
-    it('should return device list for dropdown', async () => {
-      mockedApiClient.get.mockResolvedValueOnce(mockDevicesResponse);
-
-      const result = await fetchDevicesForFilter();
-
-      expect(result).toEqual([
-        { id: 'clx1111111111111111111111111', callSign: 'Florian 1' },
-        { id: 'clx2222222222222222222222222', callSign: 'Florian 2' },
-      ]);
-    });
-
-    it('should handle errors gracefully', async () => {
-      mockedApiClient.get.mockRejectedValueOnce(new Error('Network error'));
-
-      await expect(fetchDevicesForFilter()).rejects.toThrow();
     });
   });
 

@@ -2,29 +2,29 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { z } from 'zod';
 import { apiClient } from './client';
 import { deviceKeys } from '@/lib/queryKeys';
-import { DeviceStatusEnum, type Device, type DeviceStatus } from '@radio-inventar/shared';
+import { DeviceStatusEnum, type DeviceStatus } from '@radio-inventar/shared';
 import { ActiveLoanSchema, type ActiveLoan } from './loans';
 
-/** Extended Device type with loan information for UI display */
-export interface DeviceWithLoanInfo extends Device {
-  borrowerName?: string | undefined;
-  borrowedAt?: Date | undefined;
-}
-
 /**
- * Schema for parsing Device from API response.
- * API returns dates as ISO strings, so we use z.coerce.date() to transform them.
+ * Device as delivered by GET /api/devices. Devices are sourced read-only from
+ * radio-admin (no local notes/timestamps). `deviceType` may be null because
+ * radio-admin's field is optional. `status` is composed server-side.
  */
 const DeviceApiSchema = z.object({
   id: z.string().cuid2(),
   callSign: z.string(),
   serialNumber: z.string().nullable(),
-  deviceType: z.string(),
+  deviceType: z.string().nullable(),
   status: DeviceStatusEnum,
-  notes: z.string().nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
 });
+
+export type RemoteDevice = z.infer<typeof DeviceApiSchema>;
+
+/** Extended Device type with loan information for UI display */
+export interface DeviceWithLoanInfo extends RemoteDevice {
+  borrowerName?: string | undefined;
+  borrowedAt?: Date | undefined;
+}
 
 // Zod schema for API response validation
 const DevicesResponseSchema = z.object({
@@ -50,7 +50,7 @@ const STATUS_PRIORITY: Record<DeviceStatus, number> = {
 /**
  * Fetches all devices from the API with Zod validation
  */
-async function fetchDevices(): Promise<Device[]> {
+async function fetchDevices(): Promise<RemoteDevice[]> {
   const response = await apiClient.get<unknown>('/api/devices');
   const validated = DevicesResponseSchema.safeParse(response);
 

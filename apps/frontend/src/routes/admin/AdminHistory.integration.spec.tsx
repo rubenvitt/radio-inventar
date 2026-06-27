@@ -173,9 +173,9 @@ const mockHistoryData: HistoryResponse = {
 
 const mockDevicesData = {
   data: [
-    { id: 'cly1111111111111111111111111', callSign: 'Florian 4-23', deviceType: 'Handfunkgerät', status: 'ON_LOAN' },
-    { id: 'cly2222222222222222222222222', callSign: 'Florian 4-24', deviceType: 'Funkgerät', status: 'AVAILABLE' },
-    { id: 'cly3333333333333333333333333', callSign: 'Florian 4-25', deviceType: 'Radio', status: 'MAINTENANCE' },
+    { id: 'cly1111111111111111111111111', callSign: 'Florian 4-23', serialNumber: null, deviceType: 'Handfunkgerät', status: 'ON_LOAN' },
+    { id: 'cly2222222222222222222222222', callSign: 'Florian 4-24', serialNumber: null, deviceType: 'Funkgerät', status: 'AVAILABLE' },
+    { id: 'cly3333333333333333333333333', callSign: 'Florian 4-25', serialNumber: null, deviceType: 'Radio', status: 'MAINTENANCE' },
   ],
 };
 

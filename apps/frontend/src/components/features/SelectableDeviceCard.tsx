@@ -12,7 +12,7 @@ import type { DeviceWithLoanInfo } from '@/api/devices'
  * - Zero-width and RTL control characters
  * - ASCII control characters
  */
-function sanitizeForDisplay(text: string | undefined): string {
+function sanitizeForDisplay(text: string | null | undefined): string {
   if (!text) return '';
   return text
     .replace(/[<>]/g, '')                         // HTML Injection
