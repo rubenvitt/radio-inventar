@@ -13,6 +13,14 @@ export const envSchema = z
     POCKET_ID_CLIENT_ID: z.string().optional().default(''),
     POCKET_ID_CLIENT_SECRET: z.string().optional().default(''),
     POCKET_ID_REDIRECT_URI: z.string().optional().default(''),
+    // radio-admin integration (read-only device source via OAuth2
+    // client_credentials). All four are required together; when unset the
+    // integration is simply disabled (RadioAdminService.isEnabled() === false).
+    RADIO_ADMIN_URL: z.string().optional().default(''),
+    RADIO_ADMIN_ISSUER_URL: z.string().optional().default(''),
+    RADIO_ADMIN_CLIENT_ID: z.string().optional().default(''),
+    RADIO_ADMIN_CLIENT_SECRET: z.string().optional().default(''),
+    RADIO_ADMIN_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
   })
   .superRefine((data, ctx) => {
     // Apply default for PUBLIC_APP_URL
@@ -72,6 +80,55 @@ export const envSchema = z
       try {
         const pocketIdUrl = new URL(value);
         if (data.NODE_ENV === 'production' && pocketIdUrl.protocol !== 'https:') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field} must use HTTPS in production`,
+            path: [field],
+          });
+        }
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${field} is not a valid URL`,
+          path: [field],
+        });
+      }
+    }
+
+    // radio-admin integration: all four connection fields are required together.
+    const radioAdminFields = [
+      'RADIO_ADMIN_URL',
+      'RADIO_ADMIN_ISSUER_URL',
+      'RADIO_ADMIN_CLIENT_ID',
+      'RADIO_ADMIN_CLIENT_SECRET',
+    ] as const;
+
+    const hasAnyRadioAdminConfig = radioAdminFields.some(
+      (field) => data[field].trim().length > 0,
+    );
+
+    if (!hasAnyRadioAdminConfig) {
+      return;
+    }
+
+    for (const field of radioAdminFields) {
+      if (data[field].trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${field} is required when the radio-admin integration is enabled`,
+          path: [field],
+        });
+      }
+    }
+
+    for (const [field, value] of [
+      ['RADIO_ADMIN_URL', data.RADIO_ADMIN_URL],
+      ['RADIO_ADMIN_ISSUER_URL', data.RADIO_ADMIN_ISSUER_URL],
+    ] as const) {
+      if (value.trim().length === 0) continue;
+      try {
+        const url = new URL(value);
+        if (data.NODE_ENV === 'production' && url.protocol !== 'https:') {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: `${field} must use HTTPS in production`,
