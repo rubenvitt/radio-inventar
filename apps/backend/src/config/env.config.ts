@@ -65,39 +65,41 @@ export const envSchema = z
       (field) => data[field].trim().length > 0,
     );
 
-    if (!hasAnyPocketIdConfig) {
-      return;
-    }
-
-    for (const field of pocketIdRequiredFields) {
-      if (data[field].trim().length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `${field} is required when Pocket ID authentication is enabled`,
-          path: [field],
-        });
-      }
-    }
-
-    for (const [field, value] of [
-      ['POCKET_ID_ISSUER_URL', data.POCKET_ID_ISSUER_URL],
-      ['POCKET_ID_REDIRECT_URI', data.POCKET_ID_REDIRECT_URI],
-    ] as const) {
-      try {
-        const pocketIdUrl = new URL(value);
-        if (data.NODE_ENV === 'production' && pocketIdUrl.protocol !== 'https:') {
+    // Pocket ID is optional (only validated when any of its fields is set).
+    // NOTE: previously a `return` here short-circuited the WHOLE superRefine when
+    // Pocket ID was unset, silently skipping the radio-admin validation below.
+    // It is now a guarded block so the radio-admin checks always run.
+    if (hasAnyPocketIdConfig) {
+      for (const field of pocketIdRequiredFields) {
+        if (data[field].trim().length === 0) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `${field} must use HTTPS in production`,
+            message: `${field} is required when Pocket ID authentication is enabled`,
             path: [field],
           });
         }
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `${field} is not a valid URL`,
-          path: [field],
-        });
+      }
+
+      for (const [field, value] of [
+        ['POCKET_ID_ISSUER_URL', data.POCKET_ID_ISSUER_URL],
+        ['POCKET_ID_REDIRECT_URI', data.POCKET_ID_REDIRECT_URI],
+      ] as const) {
+        try {
+          const pocketIdUrl = new URL(value);
+          if (data.NODE_ENV === 'production' && pocketIdUrl.protocol !== 'https:') {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `${field} must use HTTPS in production`,
+              path: [field],
+            });
+          }
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field} is not a valid URL`,
+            path: [field],
+          });
+        }
       }
     }
 
@@ -117,6 +119,17 @@ export const envSchema = z
       credentialFields.some((field) => data[field].trim().length > 0);
 
     if (!radioAdminTouched) {
+      // radio-admin is now the source for devices AND loans (the local Loan
+      // table was dropped). A production deploy without it boots "healthy" but
+      // 503s every kiosk action — fail fast instead.
+      if (data.NODE_ENV === 'production') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'RADIO_ADMIN_URL (+ an auth mode: RADIO_ADMIN_API_TOKEN, or the client_credentials trio) is required in production — radio-admin is the device & loan source',
+          path: ['RADIO_ADMIN_URL'],
+        });
+      }
       return;
     }
 
@@ -125,6 +138,16 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         message: 'RADIO_ADMIN_URL is required when the radio-admin integration is enabled',
         path: ['RADIO_ADMIN_URL'],
+      });
+    }
+
+    // The outbound api-token authenticates us to the loan system-of-record;
+    // hold it to the same strength as the inbound API_TOKEN.
+    if (hasApiToken && data.RADIO_ADMIN_API_TOKEN.trim().length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'RADIO_ADMIN_API_TOKEN must be at least 32 characters',
+        path: ['RADIO_ADMIN_API_TOKEN'],
       });
     }
 

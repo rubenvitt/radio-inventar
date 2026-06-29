@@ -1,4 +1,10 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpException,
+  HttpStatus,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { mapRadioAdminStatus, type HistoryFilters } from '@radio-inventar/shared';
 import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
 
@@ -81,10 +87,21 @@ export class HistoryRepository {
           else if (status === 'MAINTENANCE') maintenanceCount += 1;
           else availableCount += 1;
         }
-      } catch {
-        this.logger.warn(
-          'radio-admin unreachable; device condition counts unavailable (showing 0)',
-        );
+      } catch (error: unknown) {
+        // A true outage (no cache on fetchActiveLoans) already failed above; this
+        // inner block degrades the device-condition counts to 0. Distinguish a
+        // reachability problem (warn) from an actual bug/schema drift (error), so
+        // a non-outage failure is not silently mislabelled "unreachable".
+        if (error instanceof ServiceUnavailableException) {
+          this.logger.warn(
+            'radio-admin unreachable; device condition counts unavailable (showing 0)',
+          );
+        } else {
+          this.logger.error(
+            'Failed to compute device condition counts (showing 0):',
+            error instanceof Error ? error.message : error,
+          );
+        }
       }
 
       return {

@@ -144,6 +144,9 @@ describe('env.config', () => {
           DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
           PUBLIC_APP_URL: 'https://radio-inventar.example.com',
           API_TOKEN: 'test-api-token-at-least-32-characters-long',
+          // radio-admin is mandatory in production.
+          RADIO_ADMIN_URL: 'https://radio-admin.example.com',
+          RADIO_ADMIN_API_TOKEN: 'radio-admin-token-at-least-32-characters',
         };
 
         const result = envSchema.safeParse(env);
@@ -192,12 +195,45 @@ describe('env.config', () => {
         DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
         PUBLIC_APP_URL: 'https://radio-inventar.example.com',
         API_TOKEN: 'test-api-token-at-least-32-characters-long',
+        // radio-admin is mandatory in production (device + loan source).
+        RADIO_ADMIN_URL: 'https://radio-admin.example.com',
+        RADIO_ADMIN_API_TOKEN: 'radio-admin-token-at-least-32-characters',
       };
 
       const result = validateEnv(validConfig);
       expect(result.NODE_ENV).toBe('production');
       expect(result.PORT).toBe(3001);
       expect(result.PUBLIC_APP_URL).toBe('https://radio-inventar.example.com');
+    });
+
+    it('requires radio-admin config in production (device + loan source)', () => {
+      const noRadioAdmin = {
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        PUBLIC_APP_URL: 'https://radio-inventar.example.com',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
+      };
+      expect(envSchema.safeParse(noRadioAdmin).success).toBe(false);
+    });
+
+    it('allows the static api-token auth mode (URL + token, no client_credentials trio)', () => {
+      const apiTokenMode = {
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
+        RADIO_ADMIN_URL: 'https://radio-admin.example.com',
+        RADIO_ADMIN_API_TOKEN: 'radio-admin-token-at-least-32-characters',
+      };
+      expect(envSchema.safeParse(apiTokenMode).success).toBe(true);
+    });
+
+    it('rejects a RADIO_ADMIN_API_TOKEN shorter than 32 characters', () => {
+      const shortToken = {
+        DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+        API_TOKEN: 'test-api-token-at-least-32-characters-long',
+        RADIO_ADMIN_URL: 'https://radio-admin.example.com',
+        RADIO_ADMIN_API_TOKEN: 'too-short',
+      };
+      expect(envSchema.safeParse(shortToken).success).toBe(false);
     });
 
     it('should throw for invalid config', () => {

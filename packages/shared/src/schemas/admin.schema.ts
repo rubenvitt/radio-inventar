@@ -53,7 +53,9 @@ export const DashboardStatsSchema = z.object({
   defectCount: z.number().int().nonnegative(),
   maintenanceCount: z.number().int().nonnegative(),
   activeLoans: z.array(z.object({
-    id: z.string().cuid(), // Using cuid (v1) to match Prisma schema
+    // Loan id now comes from radio-admin (cuid2, may not start with 'c'); accept
+    // any non-empty string — same relaxation as the device ids below.
+    id: z.string().min(1),
     device: z.object({
       callSign: z.string(),
       deviceType: z.string(),
@@ -92,7 +94,9 @@ export const HistoryFiltersSchema = z.object({
  * Represents a single loan record in the history
  */
 export const HistoryItemSchema = z.object({
-  id: z.string().cuid(), // Loan id — Prisma cuid (v1)
+  // Loan id from radio-admin (cuid2, may not start with 'c'); accept any
+  // non-empty string — matches the relaxed device.id below.
+  id: z.string().min(1),
   device: z.object({
     // Device id from radio-admin (cuid2); accept any non-empty string.
     id: z.string().min(1),
