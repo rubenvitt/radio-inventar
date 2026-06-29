@@ -196,6 +196,14 @@ export class RadioAdminService {
     }
 
     if (!response.ok) {
+      // An upstream 5xx (radio-admin down behind a proxy, or an internal error)
+      // is an outage from our side — surface it as 503, consistent with
+      // refreshDevices, not as a generic 500. Only 4xx carry a machine-readable
+      // {error} code that the caller maps to a specific HttpException.
+      if (response.status >= 500) {
+        this.logger.error(`radio-admin ${method} ${path} returned ${response.status}`);
+        throw new ServiceUnavailableException('radio-admin ist nicht erreichbar');
+      }
       const payload: unknown = await response.json().catch(() => null);
       const code =
         payload && typeof payload === 'object' && 'error' in payload
