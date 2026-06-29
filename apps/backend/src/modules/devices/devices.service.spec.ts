@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DevicesService } from './devices.service';
-import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
 
 function raDevice(over: Partial<Record<string, unknown>> = {}) {
@@ -20,20 +19,32 @@ function raDevice(over: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+function raActiveLoan(over: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'l1',
+    deviceId: 'id-2',
+    snapshotCallSign: 'x',
+    snapshotDeviceType: null,
+    borrowerName: 'b',
+    borrowedAt: 1,
+    ...over,
+  };
+}
+
 describe('DevicesService', () => {
   let service: DevicesService;
-  let radioAdmin: { fetchLoanableDevices: jest.Mock };
-  let prisma: { loan: { findMany: jest.Mock } };
+  let radioAdmin: { fetchLoanableDevices: jest.Mock; fetchActiveLoans: jest.Mock };
 
   beforeEach(async () => {
-    radioAdmin = { fetchLoanableDevices: jest.fn() };
-    prisma = { loan: { findMany: jest.fn().mockResolvedValue([]) } };
+    radioAdmin = {
+      fetchLoanableDevices: jest.fn().mockResolvedValue([]),
+      fetchActiveLoans: jest.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DevicesService,
         { provide: RadioAdminService, useValue: radioAdmin },
-        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
@@ -50,9 +61,9 @@ describe('DevicesService', () => {
     ]);
   });
 
-  it('overlays ON_LOAN for devices with an active local loan', async () => {
+  it('overlays ON_LOAN for devices with an active loan from radio-admin', async () => {
     radioAdmin.fetchLoanableDevices.mockResolvedValue([raDevice({ id: 'id-1' }), raDevice({ id: 'id-2', rufname: 'B' })]);
-    prisma.loan.findMany.mockResolvedValue([{ deviceId: 'id-2' }]);
+    radioAdmin.fetchActiveLoans.mockResolvedValue([raActiveLoan({ deviceId: 'id-2' })]);
 
     const result = await service.findAll();
 

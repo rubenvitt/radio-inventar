@@ -13,13 +13,19 @@ export const envSchema = z
     POCKET_ID_CLIENT_ID: z.string().optional().default(''),
     POCKET_ID_CLIENT_SECRET: z.string().optional().default(''),
     POCKET_ID_REDIRECT_URI: z.string().optional().default(''),
-    // radio-admin integration (read-only device source via OAuth2
-    // client_credentials). All four are required together; when unset the
-    // integration is simply disabled (RadioAdminService.isEnabled() === false).
+    // radio-admin integration (now the master for BOTH devices AND loans).
+    // Two S2S auth modes:
+    //   - OAuth2 client_credentials (prod): URL + ISSUER_URL + CLIENT_ID + CLIENT_SECRET
+    //   - static api-token (local/dev or a simpler deploy): URL + API_TOKEN
+    // When no radio-admin field is set the integration is disabled
+    // (RadioAdminService.isEnabled() === false).
     RADIO_ADMIN_URL: z.string().optional().default(''),
     RADIO_ADMIN_ISSUER_URL: z.string().optional().default(''),
     RADIO_ADMIN_CLIENT_ID: z.string().optional().default(''),
     RADIO_ADMIN_CLIENT_SECRET: z.string().optional().default(''),
+    // When set, used as a static Bearer token for radio-admin instead of
+    // client_credentials (radio-admin's loan API accepts either).
+    RADIO_ADMIN_API_TOKEN: z.string().optional().default(''),
     RADIO_ADMIN_CACHE_TTL_MS: z.coerce.number().int().positive().default(30000),
   })
   .superRefine((data, ctx) => {
@@ -95,29 +101,42 @@ export const envSchema = z
       }
     }
 
-    // radio-admin integration: all four connection fields are required together.
-    const radioAdminFields = [
-      'RADIO_ADMIN_URL',
+    // radio-admin integration. Enabled when ANY radio-admin field is set; then
+    // RADIO_ADMIN_URL is always required, and the client_credentials trio
+    // (ISSUER_URL/CLIENT_ID/CLIENT_SECRET) is required UNLESS a static
+    // RADIO_ADMIN_API_TOKEN is provided.
+    const credentialFields = [
       'RADIO_ADMIN_ISSUER_URL',
       'RADIO_ADMIN_CLIENT_ID',
       'RADIO_ADMIN_CLIENT_SECRET',
     ] as const;
+    const hasApiToken = data.RADIO_ADMIN_API_TOKEN.trim().length > 0;
+    const radioAdminTouched =
+      data.RADIO_ADMIN_URL.trim().length > 0 ||
+      hasApiToken ||
+      credentialFields.some((field) => data[field].trim().length > 0);
 
-    const hasAnyRadioAdminConfig = radioAdminFields.some(
-      (field) => data[field].trim().length > 0,
-    );
-
-    if (!hasAnyRadioAdminConfig) {
+    if (!radioAdminTouched) {
       return;
     }
 
-    for (const field of radioAdminFields) {
-      if (data[field].trim().length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `${field} is required when the radio-admin integration is enabled`,
-          path: [field],
-        });
+    if (data.RADIO_ADMIN_URL.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'RADIO_ADMIN_URL is required when the radio-admin integration is enabled',
+        path: ['RADIO_ADMIN_URL'],
+      });
+    }
+
+    if (!hasApiToken) {
+      for (const field of credentialFields) {
+        if (data[field].trim().length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${field} is required when the radio-admin integration uses client_credentials (set RADIO_ADMIN_API_TOKEN to use a static token instead)`,
+            path: [field],
+          });
+        }
       }
     }
 

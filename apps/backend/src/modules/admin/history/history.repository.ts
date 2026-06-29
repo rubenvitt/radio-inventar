@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
-import { PrismaService } from '@/modules/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { mapRadioAdminStatus, type HistoryFilters } from '@radio-inventar/shared';
 import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
 
@@ -32,8 +25,8 @@ export interface DashboardStatsResult {
 /**
  * History Query Result Type
  * Matches HistoryItemSchema from @radio-inventar/shared (before serialization).
- * The `device` object is rebuilt from the loan's immutable snapshot fields — no
- * JOIN against a local device table (devices live in radio-admin).
+ * The `device` object is rebuilt from each loan's immutable snapshot — devices
+ * AND loans both live in radio-admin now, so there is no local table to join.
  */
 export interface HistoryResult {
   data: Array<{
@@ -53,69 +46,26 @@ export interface HistoryResult {
   total: number;
 }
 
-const HISTORY_RETENTION_MONTHS = 2;
-
+/**
+ * Admin dashboard + history, sourced from radio-admin (the loan master) via
+ * RadioAdminService. Retention now lives in radio-admin (scheduled purge), so
+ * there is no local cleanup here. Timestamps arrive as epoch-ms and are
+ * converted to Date so the service's `.toISOString()` keeps emitting ISO 8601.
+ */
 @Injectable()
 export class HistoryRepository {
   private readonly logger = new Logger(HistoryRepository.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly radioAdminService: RadioAdminService,
-  ) {}
-
-  private getHistoryRetentionCutoff(referenceDate: Date = new Date()): Date {
-    const cutoff = new Date(referenceDate);
-    cutoff.setUTCMonth(cutoff.getUTCMonth() - HISTORY_RETENTION_MONTHS);
-    return cutoff;
-  }
-
-  private async deleteExpiredHistoryEntries(): Promise<void> {
-    const cutoffDate = this.getHistoryRetentionCutoff();
-    try {
-      const result = await this.prisma.loan.deleteMany({
-        where: {
-          // Keep active loans (returnedAt === null) so ongoing rentals stay visible.
-          returnedAt: { not: null, lt: cutoffDate },
-        },
-      });
-      if (result.count > 0) {
-        this.logger.debug(
-          `Deleted ${result.count} expired history entries older than ${HISTORY_RETENTION_MONTHS} months`,
-        );
-      }
-    } catch (error: unknown) {
-      // Cleanup must not block dashboard/history reads.
-      this.logger.error(
-        'Failed to delete expired history entries:',
-        error instanceof Error ? error.message : error,
-      );
-    }
-  }
+  constructor(private readonly radioAdminService: RadioAdminService) {}
 
   /**
-   * Dashboard statistics. Availability counts come from radio-admin's device
-   * list (best-effort: on an outage the condition counts degrade to 0, logged),
-   * while onLoanCount and the active-loans list are always derived locally.
+   * Dashboard statistics. The active-loan count + list come from radio-admin's
+   * active loans; availability counts come from its loanable device list
+   * (best-effort: on an outage the condition counts degrade to 0, logged).
    */
   async getDashboardStats(): Promise<DashboardStatsResult> {
     try {
-      await this.deleteExpiredHistoryEntries();
-
-      // Every active loan is a distinct device (partial unique index), so the
-      // active-loan rows are the single source of truth for "on loan".
-      const activeLoans = await this.prisma.loan.findMany({
-        where: { returnedAt: null },
-        select: {
-          id: true,
-          deviceId: true,
-          borrowerName: true,
-          borrowedAt: true,
-          snapshotCallSign: true,
-          snapshotDeviceType: true,
-        },
-        orderBy: { borrowedAt: 'desc' },
-      });
+      const activeLoans = await this.radioAdminService.fetchActiveLoans();
       const onLoanCount = activeLoans.length;
       const activeDeviceIds = new Set(activeLoans.map((loan) => loan.deviceId));
 
@@ -149,14 +99,11 @@ export class HistoryRepository {
             deviceType: loan.snapshotDeviceType ?? '',
           },
           borrowerName: loan.borrowerName,
-          borrowedAt: loan.borrowedAt,
+          borrowedAt: new Date(loan.borrowedAt),
         })),
       };
     } catch (error: unknown) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024') {
-        this.logger.error('Dashboard stats query timeout');
-        throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
-      }
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         'Failed to fetch dashboard stats:',
         error instanceof Error ? error.message : error,
@@ -166,51 +113,23 @@ export class HistoryRepository {
   }
 
   /**
-   * Paginated loan history. The device sub-object is reconstructed from each
-   * loan's snapshot — historically accurate and independent of radio-admin.
+   * Paginated loan history from radio-admin. The device sub-object is rebuilt
+   * from each loan's snapshot (status derived from returnedAt). Date filters are
+   * sent as epoch-ms (radio-admin's wire format).
    */
   async getHistory(filters: HistoryFilters): Promise<HistoryResult> {
     const { deviceId, from, to, page = 1, pageSize = 100 } = filters;
 
     try {
-      await this.deleteExpiredHistoryEntries();
+      const response = await this.radioAdminService.fetchLoanHistory({
+        ...(deviceId ? { deviceId } : {}),
+        ...(from ? { from: new Date(from).getTime() } : {}),
+        ...(to ? { to: new Date(to).getTime() } : {}),
+        page,
+        pageSize,
+      });
 
-      const where: Prisma.LoanWhereInput = {};
-      if (deviceId) {
-        where.deviceId = deviceId;
-      }
-      if (from || to) {
-        where.borrowedAt = {
-          ...(from && { gte: new Date(from) }),
-          ...(to && { lte: new Date(to) }),
-        };
-      }
-
-      const skip = (page - 1) * pageSize;
-      const take = pageSize;
-
-      const [rows, total] = await Promise.all([
-        this.prisma.loan.findMany({
-          where,
-          select: {
-            id: true,
-            deviceId: true,
-            borrowerName: true,
-            borrowedAt: true,
-            returnedAt: true,
-            returnNote: true,
-            snapshotCallSign: true,
-            snapshotSerialNumber: true,
-            snapshotDeviceType: true,
-          },
-          orderBy: { borrowedAt: 'desc' },
-          skip,
-          take,
-        }),
-        this.prisma.loan.count({ where }),
-      ]);
-
-      const data = rows.map((loan) => ({
+      const data = response.rows.map((loan) => ({
         id: loan.id,
         device: {
           id: loan.deviceId,
@@ -218,20 +137,18 @@ export class HistoryRepository {
           serialNumber: loan.snapshotSerialNumber,
           deviceType: loan.snapshotDeviceType ?? '',
           // Deterministic from the loan itself — no live device lookup.
-          status: loan.returnedAt ? 'AVAILABLE' : 'ON_LOAN',
+          status: loan.returnedAt !== null ? 'AVAILABLE' : 'ON_LOAN',
         },
         borrowerName: loan.borrowerName,
-        borrowedAt: loan.borrowedAt,
-        returnedAt: loan.returnedAt,
+        borrowedAt: new Date(loan.borrowedAt),
+        // Preserve null explicitly — new Date(null) would be 1970, flipping status.
+        returnedAt: loan.returnedAt === null ? null : new Date(loan.returnedAt),
         returnNote: loan.returnNote,
       }));
 
-      return { data, total };
+      return { data, total: response.total };
     } catch (error: unknown) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024') {
-        this.logger.error('History query timeout');
-        throw new HttpException('Request timeout', HttpStatus.REQUEST_TIMEOUT);
-      }
+      if (error instanceof HttpException) throw error;
       this.logger.error('Failed to fetch history:', error instanceof Error ? error.message : error);
       throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }

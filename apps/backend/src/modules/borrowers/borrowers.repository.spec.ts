@@ -1,29 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BorrowersRepository } from './borrowers.repository';
-import { PrismaService } from '@/modules/prisma/prisma.service';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
+import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 
 describe('BorrowersRepository', () => {
   let repository: BorrowersRepository;
-  let prisma: {
-    loan: {
-      groupBy: jest.Mock;
-    };
+  let radioAdmin: {
+    fetchBorrowerSuggestions: jest.Mock;
   };
 
-  const mockDate = new Date('2025-12-17T10:00:00Z');
+  // epoch-ms values as delivered by radio-admin.
+  const msA = Date.parse('2025-12-17T10:00:00Z');
+  const msB = Date.parse('2025-12-16T10:00:00Z');
+  const msC = Date.parse('2025-12-15T10:00:00Z');
 
   beforeEach(async () => {
-    prisma = {
-      loan: {
-        groupBy: jest.fn(),
-      },
+    radioAdmin = {
+      fetchBorrowerSuggestions: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BorrowersRepository,
-        { provide: PrismaService, useValue: prisma },
+        { provide: RadioAdminService, useValue: radioAdmin },
       ],
     }).compile();
 
@@ -31,109 +30,80 @@ describe('BorrowersRepository', () => {
   });
 
   describe('findSuggestions', () => {
-    it('should return suggestions with correct structure', async () => {
-      const mockSuggestions = [
-        { borrowerName: 'Tim Müller', _max: { borrowedAt: new Date('2025-12-17') } },
-        { borrowerName: 'Tim Schäfer', _max: { borrowedAt: new Date('2025-12-16') } },
-      ];
-      prisma.loan.groupBy.mockResolvedValue(mockSuggestions);
+    it('should return suggestions with epoch-ms converted to Date', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([
+        { name: 'Tim Müller', lastUsed: msA },
+        { name: 'Tim Schäfer', lastUsed: msB },
+      ]);
 
       const result = await repository.findSuggestions('Tim');
 
       expect(result).toEqual([
-        { name: 'Tim Müller', lastUsed: new Date('2025-12-17') },
-        { name: 'Tim Schäfer', lastUsed: new Date('2025-12-16') },
+        { name: 'Tim Müller', lastUsed: new Date(msA) },
+        { name: 'Tim Schäfer', lastUsed: new Date(msB) },
       ]);
+      expect(result[0].lastUsed).toBeInstanceOf(Date);
+      expect(result[0].lastUsed.toISOString()).toBe('2025-12-17T10:00:00.000Z');
     });
 
-    it('should use case-insensitive search', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('tim');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: 'tim', mode: 'insensitive' } },
-        }),
-      );
-    });
-
-    it('should respect limit parameter', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
+    it('should delegate to radio-admin with the query and capped limit', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([]);
 
       await repository.findSuggestions('Tim', 5);
 
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 5 }),
-      );
+      expect(radioAdmin.fetchBorrowerSuggestions).toHaveBeenCalledWith('Tim', 5);
     });
 
     it('should cap limit at 50', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([]);
 
       await repository.findSuggestions('Tim', 100);
 
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 50 }),
-      );
+      expect(radioAdmin.fetchBorrowerSuggestions).toHaveBeenCalledWith('Tim', 50);
     });
 
-    it('should use default limit of 10', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
+    it('should use the default limit of 10 when none is provided', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([]);
 
       await repository.findSuggestions('Tim');
 
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 10 }),
-      );
+      expect(radioAdmin.fetchBorrowerSuggestions).toHaveBeenCalledWith('Tim', 10);
     });
 
-    it('should return empty array when no matches', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
+    it('should pass the query through verbatim (escaping lives in radio-admin)', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([]);
+
+      await repository.findSuggestions('Müller-Schmidt');
+
+      expect(radioAdmin.fetchBorrowerSuggestions).toHaveBeenCalledWith('Müller-Schmidt', 10);
+    });
+
+    it('should return an empty array when there are no matches', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([]);
 
       const result = await repository.findSuggestions('xyz');
 
       expect(result).toEqual([]);
     });
 
-    it('should order by most recently used first', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
+    it('should preserve order and handle multiple matching borrowers', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockResolvedValue([
+        { name: 'Anna Schmidt', lastUsed: msA },
+        { name: 'Anna Müller', lastUsed: msB },
+        { name: 'Anna Weber', lastUsed: msC },
+      ]);
 
-      await repository.findSuggestions('Tim');
+      const result = await repository.findSuggestions('Anna');
 
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          orderBy: { _max: { borrowedAt: 'desc' } },
-        }),
-      );
+      expect(result).toHaveLength(3);
+      expect(result[0].name).toBe('Anna Schmidt');
+      expect(result[1].name).toBe('Anna Müller');
+      expect(result[2].name).toBe('Anna Weber');
+      expect(result[2].lastUsed).toEqual(new Date(msC));
     });
 
-    it('should group by borrowerName', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('Tim');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          by: ['borrowerName'],
-        }),
-      );
-    });
-
-    it('should aggregate max borrowedAt', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('Tim');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          _max: { borrowedAt: true },
-        }),
-      );
-    });
-
-    it('should throw sanitized HttpException on database error', async () => {
-      prisma.loan.groupBy.mockRejectedValue(new Error('Database error'));
+    it('should sanitize a non-HttpException error to a 500 HttpException', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockRejectedValue(new Error('boom: P2002 leak'));
 
       await expect(repository.findSuggestions('Tim')).rejects.toThrow(HttpException);
       await expect(repository.findSuggestions('Tim')).rejects.toMatchObject({
@@ -142,93 +112,16 @@ describe('BorrowersRepository', () => {
       });
     });
 
-    it('should sanitize Prisma client errors to prevent information leakage', async () => {
-      const clientError = new Error('P2002: Unique constraint failed');
-      prisma.loan.groupBy.mockRejectedValue(clientError);
-
-      await expect(repository.findSuggestions('Tim')).rejects.toThrow('Database operation failed');
-    });
-
-    it('should handle multiple matching borrowers', async () => {
-      const mockSuggestions = [
-        { borrowerName: 'Anna Schmidt', _max: { borrowedAt: new Date('2025-12-17') } },
-        { borrowerName: 'Anna Müller', _max: { borrowedAt: new Date('2025-12-16') } },
-        { borrowerName: 'Anna Weber', _max: { borrowedAt: new Date('2025-12-15') } },
-      ];
-      prisma.loan.groupBy.mockResolvedValue(mockSuggestions);
-
-      const result = await repository.findSuggestions('Anna');
-
-      expect(result).toHaveLength(3);
-      expect(result[0].name).toBe('Anna Schmidt');
-      expect(result[1].name).toBe('Anna Müller');
-      expect(result[2].name).toBe('Anna Weber');
-    });
-
-    it('should handle special characters in search query', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('Müller-Schmidt');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: 'Müller-Schmidt', mode: 'insensitive' } },
-        }),
+    it('should rethrow an HttpException unchanged', async () => {
+      radioAdmin.fetchBorrowerSuggestions.mockRejectedValue(
+        new NotFoundException('original message'),
       );
-    });
 
-    it('should escape % wildcard to prevent matching all names', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('%');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: '\\%', mode: 'insensitive' } },
-        }),
-      );
-    });
-
-    it('should escape _ wildcard to prevent single character matching', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('_');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: '\\_', mode: 'insensitive' } },
-        }),
-      );
-    });
-
-    it('should escape multiple wildcards in query', async () => {
-      prisma.loan.groupBy.mockResolvedValue([]);
-
-      await repository.findSuggestions('Tim%Müller_');
-
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: 'Tim\\%Müller\\_', mode: 'insensitive' } },
-        }),
-      );
-    });
-
-    it('should still work with normal queries after escaping', async () => {
-      const mockSuggestions = [
-        { borrowerName: 'Tim Müller', _max: { borrowedAt: new Date('2025-12-17') } },
-      ];
-      prisma.loan.groupBy.mockResolvedValue(mockSuggestions);
-
-      const result = await repository.findSuggestions('Tim');
-
-      expect(result).toEqual([
-        { name: 'Tim Müller', lastUsed: new Date('2025-12-17') },
-      ]);
-      expect(prisma.loan.groupBy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { borrowerName: { contains: 'Tim', mode: 'insensitive' } },
-        }),
-      );
+      await expect(repository.findSuggestions('Tim')).rejects.toThrow(NotFoundException);
+      await expect(repository.findSuggestions('Tim')).rejects.toMatchObject({
+        message: 'original message',
+        status: HttpStatus.NOT_FOUND,
+      });
     });
   });
 });
