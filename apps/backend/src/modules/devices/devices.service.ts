@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/modules/prisma/prisma.service';
 import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
 import { mapRadioAdminStatus, type DeviceStatus } from '@radio-inventar/shared';
 import { DeviceResponseDto } from './dto/device-response.dto';
@@ -13,20 +12,18 @@ export interface FindDevicesOptions {
 /**
  * Public device read layer. Devices are the master data of radio-admin and are
  * fetched read-only via RadioAdminService; the per-device status is composed
- * here by overlaying radio-inventar's own active loans (ON_LOAN) on top of the
- * radio-admin condition. No device data is stored locally.
+ * here by overlaying the active loans (ON_LOAN) — also sourced from radio-admin
+ * (the loan master) — on top of the radio-admin condition. Nothing is stored
+ * locally.
  */
 @Injectable()
 export class DevicesService {
-  constructor(
-    private readonly radioAdminService: RadioAdminService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly radioAdminService: RadioAdminService) {}
 
   async findAll(options: FindDevicesOptions = {}): Promise<DeviceResponseDto[]> {
     const [devices, activeLoans] = await Promise.all([
       this.radioAdminService.fetchLoanableDevices(),
-      this.prisma.loan.findMany({ where: { returnedAt: null }, select: { deviceId: true } }),
+      this.radioAdminService.fetchActiveLoans(),
     ]);
     const activeDeviceIds = new Set(activeLoans.map((loan) => loan.deviceId));
 

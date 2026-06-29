@@ -73,6 +73,9 @@ export * from './schemas/device.schema.js';
 // radio-admin loan-device contract (read-only device source) and status mapping
 export * from './schemas/radio-admin-device.schema.js';
 
+// radio-admin loan-API contract (loans master S2S: active/record/history/borrowers)
+export * from './schemas/radio-admin-loan.schema.js';
+
 // Admin schemas and types
 export * from './schemas/admin.schema.js';
 

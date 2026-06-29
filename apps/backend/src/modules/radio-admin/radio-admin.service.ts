@@ -3,9 +3,32 @@ import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import {
   RadioAdminLoanDeviceListSchema,
+  RadioAdminActiveLoanListSchema,
+  RadioAdminLoanRecordSchema,
+  RadioAdminLoanHistorySchema,
+  RadioAdminBorrowerSuggestionListSchema,
   type RadioAdminLoanDevice,
+  type RadioAdminActiveLoan,
+  type RadioAdminLoanRecord,
+  type RadioAdminLoanHistory,
+  type RadioAdminBorrowerSuggestion,
 } from '@radio-inventar/shared';
 import type { EnvConfig } from '../../config/env.config';
+
+/**
+ * A non-2xx response from a radio-admin loan endpoint, carrying the
+ * machine-readable `{error}` code + HTTP status so the calling repository can
+ * map it to the right NestJS HttpException (e.g. device_already_on_loan → 409).
+ */
+export class RadioAdminLoanError extends Error {
+  constructor(
+    readonly code: string,
+    readonly status: number,
+  ) {
+    super(code);
+    this.name = 'RadioAdminLoanError';
+  }
+}
 
 const DiscoverySchema = z.object({ token_endpoint: z.string().url() });
 const TokenResponseSchema = z.object({
@@ -45,14 +68,27 @@ export class RadioAdminService {
 
   constructor(private readonly configService: ConfigService<EnvConfig, true>) {}
 
-  /** True when all radio-admin connection settings are configured. */
+  /** True when radio-admin is configured (api-token mode OR client_credentials). */
   isEnabled(): boolean {
+    if (!this.configService.get('RADIO_ADMIN_URL')) return false;
+    // Static api-token mode needs only the URL + token.
+    if (this.configService.get('RADIO_ADMIN_API_TOKEN')) return true;
+    // OAuth2 client_credentials mode needs the full Pocket ID trio.
     return Boolean(
-      this.configService.get('RADIO_ADMIN_URL') &&
-        this.configService.get('RADIO_ADMIN_ISSUER_URL') &&
+      this.configService.get('RADIO_ADMIN_ISSUER_URL') &&
         this.configService.get('RADIO_ADMIN_CLIENT_ID') &&
         this.configService.get('RADIO_ADMIN_CLIENT_SECRET'),
     );
+  }
+
+  /**
+   * Bearer auth header for S2S calls: a static api-token when configured, else
+   * an OAuth2 client_credentials access token (Pocket ID, cached).
+   */
+  private async getAuthHeader(): Promise<string> {
+    const apiToken = this.configService.get('RADIO_ADMIN_API_TOKEN');
+    if (apiToken) return `Bearer ${apiToken}`;
+    return `Bearer ${await this.getAccessToken()}`;
   }
 
   /**
@@ -105,12 +141,12 @@ export class RadioAdminService {
   }
 
   private async refreshDevices(): Promise<RadioAdminLoanDevice[]> {
-    const token = await this.getAccessToken();
+    const auth = await this.getAuthHeader();
     const base = this.configService.get('RADIO_ADMIN_URL');
     const url = new URL('api/v1/loan-devices', base.endsWith('/') ? base : `${base}/`);
 
     const response = await fetch(url, {
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      headers: { Accept: 'application/json', Authorization: auth },
     });
     if (!response.ok) {
       throw new ServiceUnavailableException(`radio-admin loan API returned ${response.status}`);
@@ -124,6 +160,113 @@ export class RadioAdminService {
 
     this.deviceCache = { devices: parsed.data, fetchedAt: Date.now() };
     return parsed.data;
+  }
+
+  /**
+   * Perform an authenticated S2S request to a radio-admin loan endpoint and
+   * return the parsed JSON. On a non-2xx response the `{error}` code is surfaced
+   * as a {@link RadioAdminLoanError} (with the HTTP status) so the caller can map
+   * it to the right HttpException; an unreachable host becomes a 503.
+   */
+  private async loanRequest(method: string, path: string, body?: unknown): Promise<unknown> {
+    if (!this.isEnabled()) {
+      throw new ServiceUnavailableException('radio-admin integration is not configured');
+    }
+    const base = this.configService.get('RADIO_ADMIN_URL');
+    const url = new URL(path, base.endsWith('/') ? base : `${base}/`);
+    const auth = await this.getAuthHeader();
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        headers: {
+          Accept: 'application/json',
+          Authorization: auth,
+          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      });
+    } catch (error) {
+      this.logger.error(
+        `radio-admin ${method} ${path} unreachable:`,
+        error instanceof Error ? error.message : error,
+      );
+      throw new ServiceUnavailableException('radio-admin ist nicht erreichbar');
+    }
+
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null);
+      const code =
+        payload && typeof payload === 'object' && 'error' in payload
+          ? String((payload as { error: unknown }).error)
+          : `http_${response.status}`;
+      throw new RadioAdminLoanError(code, response.status);
+    }
+
+    return response.json();
+  }
+
+  private parse<T>(schema: z.ZodType<T>, json: unknown, what: string): T {
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      this.logger.error(`radio-admin ${what} payload failed validation`);
+      throw new ServiceUnavailableException(`radio-admin ${what} payload is invalid`);
+    }
+    return parsed.data;
+  }
+
+  /** POST /api/v1/loans — create a loan at the master. Throws RadioAdminLoanError on 4xx. */
+  async createLoan(body: { deviceId: string; borrowerName: string }): Promise<RadioAdminLoanRecord> {
+    const json = await this.loanRequest('POST', 'api/v1/loans', body);
+    return this.parse(RadioAdminLoanRecordSchema, json, 'create-loan');
+  }
+
+  /** PATCH /api/v1/loans/:loanId — return a loan. Throws RadioAdminLoanError on 4xx. */
+  async returnLoan(
+    loanId: string,
+    body: { returnNote: string | null },
+  ): Promise<RadioAdminLoanRecord> {
+    const json = await this.loanRequest(
+      'PATCH',
+      `api/v1/loans/${encodeURIComponent(loanId)}`,
+      body,
+    );
+    return this.parse(RadioAdminLoanRecordSchema, json, 'return-loan');
+  }
+
+  /** GET /api/v1/active-loans — all active loans (un-paginated). */
+  async fetchActiveLoans(): Promise<RadioAdminActiveLoan[]> {
+    const json = await this.loanRequest('GET', 'api/v1/active-loans');
+    return this.parse(RadioAdminActiveLoanListSchema, json, 'active-loans');
+  }
+
+  /** GET /api/v1/loans/history — paginated loan history (from/to are epoch-ms). */
+  async fetchLoanHistory(params: {
+    deviceId?: string;
+    from?: number;
+    to?: number;
+    page?: number;
+    pageSize?: number;
+  }): Promise<RadioAdminLoanHistory> {
+    const qs = new URLSearchParams();
+    if (params.deviceId) qs.set('deviceId', params.deviceId);
+    if (params.from !== undefined) qs.set('from', String(params.from));
+    if (params.to !== undefined) qs.set('to', String(params.to));
+    if (params.page !== undefined) qs.set('page', String(params.page));
+    if (params.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+    const json = await this.loanRequest('GET', `api/v1/loans/history?${qs.toString()}`);
+    return this.parse(RadioAdminLoanHistorySchema, json, 'loan-history');
+  }
+
+  /** GET /api/v1/borrowers/suggestions — borrower-name autocomplete. */
+  async fetchBorrowerSuggestions(
+    q: string,
+    limit: number,
+  ): Promise<RadioAdminBorrowerSuggestion[]> {
+    const qs = new URLSearchParams({ q, limit: String(limit) });
+    const json = await this.loanRequest('GET', `api/v1/borrowers/suggestions?${qs.toString()}`);
+    return this.parse(RadioAdminBorrowerSuggestionListSchema, json, 'borrower-suggestions');
   }
 
   private async getAccessToken(): Promise<string> {

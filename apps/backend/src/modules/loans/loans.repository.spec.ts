@@ -1,223 +1,276 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HttpException } from '@nestjs/common';
 import { LoansRepository } from './loans.repository';
-import { PrismaService } from '@/modules/prisma/prisma.service';
-import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
-import { Prisma } from '@prisma/client';
+import {
+  RadioAdminService,
+  RadioAdminLoanError,
+} from '@/modules/radio-admin/radio-admin.service';
 
+/**
+ * LoansRepository is now a THIN CLIENT over radio-admin (the loan system of
+ * record). It no longer touches prisma.loan: create/return/findActive delegate
+ * to RadioAdminService. These tests mock RadioAdminService and assert that the
+ * repository (1) rebuilds the kiosk-facing DTOs — converting epoch-ms → Date and
+ * reattaching the device{} object — and (2) maps RadioAdminLoanError codes to the
+ * historical German HttpExceptions.
+ */
 describe('LoansRepository', () => {
   let repository: LoansRepository;
-  let prisma: {
-    loan: {
-      findMany: jest.Mock;
-      findUnique: jest.Mock;
-      create: jest.Mock;
-      update: jest.Mock;
-      updateMany: jest.Mock;
-      count: jest.Mock;
-    };
+  let radioAdmin: {
+    fetchActiveLoans: jest.Mock;
+    createLoan: jest.Mock;
+    returnLoan: jest.Mock;
   };
-  let radioAdmin: { getDeviceById: jest.Mock };
 
-  const mockDate = new Date('2025-12-16T10:00:00Z');
-
-  const raDevice = {
-    id: 'clz123456789012345678901',
-    issi: '1001',
-    opta: null,
-    rufname: 'Florian 4/1',
-    status: 'Einsatzbereit',
-    location: null,
-    deviceType: 'HRT',
-    serialNumber: 'SN-1',
-    hersteller: null,
-    bedieneinheit: null,
-    funktion: null,
-  };
+  /** Capture the rejection of a promise, failing if it unexpectedly resolves. */
+  async function captureError(promise: Promise<unknown>): Promise<unknown> {
+    try {
+      await promise;
+    } catch (error) {
+      return error;
+    }
+    throw new Error('expected promise to reject, but it resolved');
+  }
 
   beforeEach(async () => {
-    prisma = {
-      loan: {
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn(),
-        count: jest.fn(),
-      },
+    radioAdmin = {
+      fetchActiveLoans: jest.fn(),
+      createLoan: jest.fn(),
+      returnLoan: jest.fn(),
     };
-    radioAdmin = { getDeviceById: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LoansRepository,
-        { provide: PrismaService, useValue: prisma },
-        { provide: RadioAdminService, useValue: radioAdmin },
-      ],
+      providers: [LoansRepository, { provide: RadioAdminService, useValue: radioAdmin }],
     }).compile();
 
     repository = module.get<LoansRepository>(LoansRepository);
   });
 
   describe('findActive', () => {
-    const activeRow = {
+    const borrowedAtMs = Date.parse('2025-12-16T08:00:00Z');
+
+    const activeLoan = {
       id: 'loan1abcdefghijklmnopqrs',
       deviceId: 'device1abcdefghijklmnopq',
-      borrowerName: 'Tim Schäfer',
-      borrowedAt: new Date('2025-12-16T08:00:00Z'),
       snapshotCallSign: 'Florian 4-22',
+      snapshotDeviceType: 'HRT',
+      borrowerName: 'Tim Schäfer',
+      borrowedAt: borrowedAtMs,
     };
 
-    it('rebuilds the device sub-object from the loan snapshot, status ON_LOAN', async () => {
-      prisma.loan.findMany.mockResolvedValue([activeRow]);
+    function makeLoan(i: number) {
+      return {
+        id: `loan-${i}`,
+        deviceId: `device-${i}`,
+        snapshotCallSign: `Florian ${i}`,
+        snapshotDeviceType: 'HRT',
+        borrowerName: `Borrower ${i}`,
+        borrowedAt: borrowedAtMs - i * 1000,
+      };
+    }
+
+    it('maps a radio-admin active loan to the kiosk DTO (borrowedAt Date, device ON_LOAN)', async () => {
+      radioAdmin.fetchActiveLoans.mockResolvedValue([activeLoan]);
 
       const result = await repository.findActive();
 
+      expect(radioAdmin.fetchActiveLoans).toHaveBeenCalledTimes(1);
       expect(result).toEqual([
         {
-          id: activeRow.id,
-          deviceId: activeRow.deviceId,
-          borrowerName: activeRow.borrowerName,
-          borrowedAt: activeRow.borrowedAt,
-          device: { id: activeRow.deviceId, callSign: 'Florian 4-22', status: 'ON_LOAN' },
+          id: activeLoan.id,
+          deviceId: activeLoan.deviceId,
+          borrowerName: activeLoan.borrowerName,
+          borrowedAt: new Date(borrowedAtMs),
+          device: {
+            id: activeLoan.deviceId,
+            callSign: activeLoan.snapshotCallSign,
+            status: 'ON_LOAN',
+          },
         },
       ]);
-      const call = prisma.loan.findMany.mock.calls[0][0];
-      expect(call.where).toEqual({ returnedAt: null });
-      expect(call.select.snapshotCallSign).toBe(true);
-      expect(call.orderBy).toEqual({ borrowedAt: 'desc' });
+      expect(result[0].borrowedAt).toBeInstanceOf(Date);
+      expect(result[0].borrowedAt.toISOString()).toBe('2025-12-16T08:00:00.000Z');
+    });
+
+    it('applies the skip/take window locally by slicing the un-paginated list', async () => {
+      const loans = [makeLoan(0), makeLoan(1), makeLoan(2), makeLoan(3), makeLoan(4)];
+      radioAdmin.fetchActiveLoans.mockResolvedValue(loans);
+
+      const result = await repository.findActive({ take: 2, skip: 1 });
+
+      expect(result.map((r) => r.id)).toEqual(['loan-1', 'loan-2']);
+    });
+
+    it('defaults take to DEFAULT_PAGE_SIZE (100) when not provided', async () => {
+      const loans = Array.from({ length: 150 }, (_, i) => makeLoan(i));
+      radioAdmin.fetchActiveLoans.mockResolvedValue(loans);
+
+      const result = await repository.findActive();
+
+      expect(result).toHaveLength(100);
+      expect(result[0].id).toBe('loan-0');
     });
 
     it('caps take at MAX_PAGE_SIZE (500)', async () => {
-      prisma.loan.findMany.mockResolvedValue([]);
-      await repository.findActive({ take: 1000 });
-      expect(prisma.loan.findMany.mock.calls[0][0].take).toBe(500);
+      const loans = Array.from({ length: 600 }, (_, i) => makeLoan(i));
+      radioAdmin.fetchActiveLoans.mockResolvedValue(loans);
+
+      const result = await repository.findActive({ take: 1000 });
+
+      expect(result).toHaveLength(500);
     });
 
-    it('sanitizes db errors', async () => {
-      prisma.loan.findMany.mockRejectedValue(new Error('Prisma connection failed'));
-      await expect(repository.findActive()).rejects.toThrow('Database operation failed');
+    it('propagates errors from radio-admin unchanged', async () => {
+      radioAdmin.fetchActiveLoans.mockRejectedValue(new Error('radio-admin unreachable'));
+      await expect(repository.findActive()).rejects.toThrow('radio-admin unreachable');
     });
   });
 
   describe('create', () => {
     const createDto = { deviceId: 'clz123456789012345678901', borrowerName: 'Max Mustermann' };
+    const borrowedAtMs = Date.parse('2025-12-16T10:00:00Z');
 
-    it('writes a device snapshot and returns the device sub-object (ON_LOAN)', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue(raDevice);
-      prisma.loan.create.mockResolvedValue({
-        id: 'loan12345678901234567890',
-        deviceId: createDto.deviceId,
-        borrowerName: createDto.borrowerName,
-        borrowedAt: mockDate,
-      });
+    const loanRecord = {
+      id: 'loan12345678901234567890',
+      deviceId: createDto.deviceId,
+      snapshotCallSign: 'Florian 4/1',
+      snapshotSerialNumber: 'SN-1',
+      snapshotDeviceType: 'HRT',
+      borrowerName: createDto.borrowerName,
+      borrowedAt: borrowedAtMs,
+      returnedAt: null,
+      returnNote: null,
+    };
 
-      const result = await repository.create(createDto);
-
-      expect(radioAdmin.getDeviceById).toHaveBeenCalledWith(createDto.deviceId);
-      expect(prisma.loan.create.mock.calls[0][0].data).toMatchObject({
-        deviceId: createDto.deviceId,
-        borrowerName: createDto.borrowerName,
-        snapshotCallSign: 'Florian 4/1',
-        snapshotSerialNumber: 'SN-1',
-        snapshotDeviceType: 'HRT',
-      });
-      expect(result.device).toEqual({
-        id: createDto.deviceId,
-        callSign: 'Florian 4/1',
-        status: 'ON_LOAN',
-      });
-    });
-
-    it('falls back to issi for the snapshot call sign when rufname is null', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue({ ...raDevice, rufname: null });
-      prisma.loan.create.mockResolvedValue({
-        id: 'loan12345678901234567890',
-        deviceId: createDto.deviceId,
-        borrowerName: createDto.borrowerName,
-        borrowedAt: mockDate,
-      });
+    it('delegates to radio-admin and returns the kiosk DTO (borrowedAt Date, device ON_LOAN)', async () => {
+      radioAdmin.createLoan.mockResolvedValue(loanRecord);
 
       const result = await repository.create(createDto);
-      expect(prisma.loan.create.mock.calls[0][0].data.snapshotCallSign).toBe('1001');
-      expect(result.device.callSign).toBe('1001');
+
+      expect(radioAdmin.createLoan).toHaveBeenCalledWith({
+        deviceId: createDto.deviceId,
+        borrowerName: createDto.borrowerName,
+      });
+      expect(result).toEqual({
+        id: loanRecord.id,
+        deviceId: createDto.deviceId,
+        borrowerName: createDto.borrowerName,
+        borrowedAt: new Date(borrowedAtMs),
+        device: { id: createDto.deviceId, callSign: 'Florian 4/1', status: 'ON_LOAN' },
+      });
+      expect(result.borrowedAt).toBeInstanceOf(Date);
     });
 
-    it('throws 404 when the device is not a loanable radio-admin device', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue(null);
-      await expect(repository.create(createDto)).rejects.toMatchObject({ status: 404 });
+    it.each([
+      ['device_not_found', 404],
+      ['device_not_loanable', 404],
+      ['device_not_available', 409],
+      ['device_already_on_loan', 409],
+    ])('maps RadioAdminLoanError %s to HttpException %i', async (code, httpStatus) => {
+      radioAdmin.createLoan.mockRejectedValue(new RadioAdminLoanError(code as string, 400));
+
+      const error = await captureError(repository.create(createDto));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(httpStatus);
     });
 
-    it('throws 409 when radio-admin reports the device defect or in maintenance', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue({ ...raDevice, status: 'Defekt' });
-      await expect(repository.create(createDto)).rejects.toMatchObject({ status: 409 });
-      expect(prisma.loan.create).not.toHaveBeenCalled();
+    it('sanitizes unknown radio-admin errors to 500', async () => {
+      radioAdmin.createLoan.mockRejectedValue(new RadioAdminLoanError('something_weird', 400));
+
+      const error = await captureError(repository.create(createDto));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
     });
 
-    it('throws 409 when the device already has an active loan (partial unique index, P2002)', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue(raDevice);
-      const err = Object.create(Prisma.PrismaClientKnownRequestError.prototype);
-      err.code = 'P2002';
-      prisma.loan.create.mockRejectedValue(err);
-      await expect(repository.create(createDto)).rejects.toMatchObject({ status: 409 });
-    });
+    it('sanitizes non-loan errors to 500', async () => {
+      radioAdmin.createLoan.mockRejectedValue(new Error('boom'));
 
-    it('sanitizes unknown db errors to 500', async () => {
-      radioAdmin.getDeviceById.mockResolvedValue(raDevice);
-      prisma.loan.create.mockRejectedValue(new Error('boom'));
-      await expect(repository.create(createDto)).rejects.toMatchObject({ status: 500 });
+      const error = await captureError(repository.create(createDto));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
     });
   });
 
   describe('returnLoan', () => {
     const loanId = 'loan12345678901234567890';
     const deviceId = 'device123456789012345678';
+    const borrowedAtMs = Date.parse('2025-12-16T08:00:00Z');
+    const returnedAtMs = Date.parse('2025-12-18T14:00:00Z');
 
-    function mockReturned(returnNote: string | null) {
-      prisma.loan.updateMany.mockResolvedValue({ count: 1 });
-      prisma.loan.findUnique.mockResolvedValue({
+    function returnedRecord(returnNote: string | null) {
+      return {
+        id: loanId,
+        deviceId,
+        snapshotCallSign: 'Florian 4-22',
+        snapshotSerialNumber: 'SN-1',
+        snapshotDeviceType: 'HRT',
+        borrowerName: 'Max Mustermann',
+        borrowedAt: borrowedAtMs,
+        returnedAt: returnedAtMs,
+        returnNote,
+      };
+    }
+
+    it('delegates to radio-admin and returns the kiosk DTO (dates + device AVAILABLE)', async () => {
+      radioAdmin.returnLoan.mockResolvedValue(returnedRecord(null));
+
+      const result = await repository.returnLoan(loanId, null);
+
+      expect(radioAdmin.returnLoan).toHaveBeenCalledWith(loanId, { returnNote: null });
+      expect(result).toEqual({
         id: loanId,
         deviceId,
         borrowerName: 'Max Mustermann',
-        borrowedAt: new Date('2025-12-16T08:00:00Z'),
-        returnedAt: new Date('2025-12-18T14:00:00Z'),
-        returnNote,
-        snapshotCallSign: 'Florian 4-22',
+        borrowedAt: new Date(borrowedAtMs),
+        returnedAt: new Date(returnedAtMs),
+        returnNote: null,
+        device: { id: deviceId, callSign: 'Florian 4-22', status: 'AVAILABLE' },
       });
-    }
-
-    it('closes the open loan atomically and returns device status AVAILABLE', async () => {
-      mockReturned(null);
-      const result = await repository.returnLoan(loanId, null);
-
-      const call = prisma.loan.updateMany.mock.calls[0][0];
-      expect(call.where).toEqual({ id: loanId, returnedAt: null });
-      expect(call.data.returnedAt).toBeInstanceOf(Date);
+      expect(result.borrowedAt).toBeInstanceOf(Date);
       expect(result.returnedAt).toBeInstanceOf(Date);
-      expect(result.device).toEqual({ id: deviceId, callSign: 'Florian 4-22', status: 'AVAILABLE' });
+      expect(result.returnedAt.toISOString()).toBe('2025-12-18T14:00:00.000Z');
     });
 
-    it('persists the return note', async () => {
-      mockReturned('Akku schwach');
+    it('passes through and preserves the return note', async () => {
+      radioAdmin.returnLoan.mockResolvedValue(returnedRecord('Akku schwach'));
+
       const result = await repository.returnLoan(loanId, 'Akku schwach');
-      expect(prisma.loan.updateMany.mock.calls[0][0].data.returnNote).toBe('Akku schwach');
+
+      expect(radioAdmin.returnLoan).toHaveBeenCalledWith(loanId, { returnNote: 'Akku schwach' });
       expect(result.returnNote).toBe('Akku schwach');
     });
 
-    it('throws 409 when the loan was already returned', async () => {
-      prisma.loan.updateMany.mockResolvedValue({ count: 0 });
-      prisma.loan.findUnique.mockResolvedValue({ id: loanId });
-      await expect(repository.returnLoan(loanId, null)).rejects.toMatchObject({ status: 409 });
+    it('throws 500 when radio-admin returns a record without a returnedAt', async () => {
+      radioAdmin.returnLoan.mockResolvedValue({ ...returnedRecord(null), returnedAt: null });
+
+      const error = await captureError(repository.returnLoan(loanId, null));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
     });
 
-    it('throws 404 when the loan does not exist', async () => {
-      prisma.loan.updateMany.mockResolvedValue({ count: 0 });
-      prisma.loan.findUnique.mockResolvedValue(null);
-      await expect(repository.returnLoan(loanId, null)).rejects.toMatchObject({ status: 404 });
+    it.each([
+      ['loan_not_found', 404],
+      ['loan_already_returned', 409],
+    ])('maps RadioAdminLoanError %s to HttpException %i', async (code, httpStatus) => {
+      radioAdmin.returnLoan.mockRejectedValue(new RadioAdminLoanError(code as string, 400));
+
+      const error = await captureError(repository.returnLoan(loanId, null));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(httpStatus);
     });
 
-    it('sanitizes unknown db errors to 500', async () => {
-      prisma.loan.updateMany.mockRejectedValue(new Error('boom'));
-      await expect(repository.returnLoan(loanId, null)).rejects.toMatchObject({ status: 500 });
+    it('sanitizes unknown radio-admin errors to 500', async () => {
+      radioAdmin.returnLoan.mockRejectedValue(new Error('boom'));
+
+      const error = await captureError(repository.returnLoan(loanId, null));
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(500);
     });
   });
 });

@@ -1,23 +1,20 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '@/modules/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { ActiveLoanResponseDto } from './dto/active-loan-response.dto';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { CreateLoanResponseDto } from './dto/create-loan-response.dto';
 import { ReturnLoanResponseDto } from './dto/return-loan-response.dto';
-import { PAGINATION, ERROR_MESSAGES, mapRadioAdminStatus } from '@radio-inventar/shared';
-import { RadioAdminService } from '@/modules/radio-admin/radio-admin.service';
+import { PAGINATION, ERROR_MESSAGES } from '@radio-inventar/shared';
+import { RadioAdminService, RadioAdminLoanError } from '@/modules/radio-admin/radio-admin.service';
 
 /**
- * Loans Repository — owns the loan lifecycle locally.
+ * Loans Repository — a THIN CLIENT over radio-admin (the loan system of record).
  *
- * Devices are NOT stored locally anymore: master data comes read-only from
- * radio-admin via RadioAdminService, and each loan keeps an immutable SNAPSHOT
- * of the device's display fields. Availability is derived from active loans, so
- * there is no device status to write back. The atomic "one active loan per
- * device" guarantee is enforced by the partial unique index
- * `loans_device_active_uidx` (a concurrent insert hits P2002 → 409) instead of
- * the old read-status-then-CAS dance.
+ * radio-inventar no longer stores loans: create/return/findActive all delegate
+ * to radio-admin's S2S loan API via RadioAdminService. This layer's only job is
+ * to (1) rebuild the EXACT kiosk-facing DTOs (the radio-admin LoanRecord is a
+ * superset and lacks the device{} object), converting epoch-ms → Date so the
+ * serialized JSON stays byte-identical, and (2) map radio-admin's {error} codes
+ * back to the German HttpExceptions the kiosk has always seen.
  */
 
 export interface FindActiveOptions {
@@ -31,141 +28,92 @@ const { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } = PAGINATION;
 export class LoansRepository {
   private readonly logger = new Logger(LoansRepository.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly radioAdminService: RadioAdminService,
-  ) {}
+  constructor(private readonly radioAdminService: RadioAdminService) {}
 
   async findActive(options: FindActiveOptions = {}): Promise<ActiveLoanResponseDto[]> {
     const take = Math.min(options.take ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const skip = options.skip ?? 0;
 
-    try {
-      const loans = await this.prisma.loan.findMany({
-        where: { returnedAt: null },
-        select: {
-          id: true,
-          deviceId: true,
-          borrowerName: true,
-          borrowedAt: true,
-          snapshotCallSign: true,
-        },
-        orderBy: { borrowedAt: 'desc' },
-        take,
-        skip,
-      });
-
-      return loans.map((loan) => ({
-        id: loan.id,
-        deviceId: loan.deviceId,
-        borrowerName: loan.borrowerName,
-        borrowedAt: loan.borrowedAt,
-        // An active loan is by definition ON_LOAN; rebuilt from the snapshot.
-        device: { id: loan.deviceId, callSign: loan.snapshotCallSign, status: 'ON_LOAN' },
-      }));
-    } catch (error: unknown) {
-      this.logger.error('Failed to find active loans:', error instanceof Error ? error.message : error);
-      throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    // radio-admin returns ALL active loans (ordered borrowedAt desc, un-paginated);
+    // re-apply the historical take/skip window locally.
+    const all = await this.radioAdminService.fetchActiveLoans();
+    return all.slice(skip, skip + take).map((loan) => ({
+      id: loan.id,
+      deviceId: loan.deviceId,
+      borrowerName: loan.borrowerName,
+      borrowedAt: new Date(loan.borrowedAt),
+      device: { id: loan.deviceId, callSign: loan.snapshotCallSign, status: 'ON_LOAN' },
+    }));
   }
 
   async create(dto: CreateLoanDto): Promise<CreateLoanResponseDto> {
-    // Device master data is owned by radio-admin (read-only). Not loanable there
-    // → not borrowable here.
-    const device = await this.radioAdminService.getDeviceById(dto.deviceId);
-    if (!device) {
-      throw new HttpException(ERROR_MESSAGES.DEVICE_NOT_FOUND, HttpStatus.NOT_FOUND);
-    }
-
-    // radio-admin is the master for device condition: block defect / maintenance.
-    const condition = mapRadioAdminStatus(device.status, false);
-    if (condition === 'DEFECT' || condition === 'MAINTENANCE') {
-      throw new HttpException(ERROR_MESSAGES.DEVICE_NOT_AVAILABLE, HttpStatus.CONFLICT);
-    }
-
-    const callSign = device.rufname ?? device.issi;
-
     try {
-      const loan = await this.prisma.loan.create({
-        data: {
-          deviceId: dto.deviceId,
-          borrowerName: dto.borrowerName,
-          snapshotCallSign: callSign,
-          snapshotSerialNumber: device.serialNumber,
-          snapshotDeviceType: device.deviceType,
-        },
-        select: { id: true, deviceId: true, borrowerName: true, borrowedAt: true },
+      const loan = await this.radioAdminService.createLoan({
+        deviceId: dto.deviceId,
+        borrowerName: dto.borrowerName,
       });
-
       return {
         id: loan.id,
         deviceId: loan.deviceId,
         borrowerName: loan.borrowerName,
-        borrowedAt: loan.borrowedAt,
-        device: { id: loan.deviceId, callSign, status: 'ON_LOAN' },
+        borrowedAt: new Date(loan.borrowedAt),
+        device: { id: loan.deviceId, callSign: loan.snapshotCallSign, status: 'ON_LOAN' },
       };
     } catch (error: unknown) {
-      // Partial unique index violation → device already has an active loan.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new HttpException(ERROR_MESSAGES.DEVICE_NOT_AVAILABLE, HttpStatus.CONFLICT);
-      }
-      this.logger.error('Failed to create loan:', error instanceof Error ? error.message : error);
-      throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.mapLoanError(error, 'create');
     }
   }
 
   async returnLoan(loanId: string, returnNote: string | null): Promise<ReturnLoanResponseDto> {
     try {
-      // Atomic close: only the still-open row is updated. count===0 means the
-      // loan is missing or already returned — no transaction needed.
-      const result = await this.prisma.loan.updateMany({
-        where: { id: loanId, returnedAt: null },
-        data: { returnedAt: new Date(), returnNote },
-      });
-
-      if (result.count === 0) {
-        const exists = await this.prisma.loan.findUnique({
-          where: { id: loanId },
-          select: { id: true },
-        });
-        throw new HttpException(
-          exists ? ERROR_MESSAGES.LOAN_ALREADY_RETURNED : ERROR_MESSAGES.LOAN_NOT_FOUND,
-          exists ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND,
-        );
-      }
-
-      const updated = await this.prisma.loan.findUnique({
-        where: { id: loanId },
-        select: {
-          id: true,
-          deviceId: true,
-          borrowerName: true,
-          borrowedAt: true,
-          returnedAt: true,
-          returnNote: true,
-          snapshotCallSign: true,
-        },
-      });
-      if (!updated || !updated.returnedAt) {
+      const loan = await this.radioAdminService.returnLoan(loanId, { returnNote });
+      if (loan.returnedAt === null) {
         throw new HttpException(
           'Rückgabezeitpunkt konnte nicht gesetzt werden',
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-
       return {
-        id: updated.id,
-        deviceId: updated.deviceId,
-        borrowerName: updated.borrowerName,
-        borrowedAt: updated.borrowedAt,
-        returnedAt: updated.returnedAt,
-        returnNote: updated.returnNote,
-        device: { id: updated.deviceId, callSign: updated.snapshotCallSign, status: 'AVAILABLE' },
+        id: loan.id,
+        deviceId: loan.deviceId,
+        borrowerName: loan.borrowerName,
+        borrowedAt: new Date(loan.borrowedAt),
+        returnedAt: new Date(loan.returnedAt),
+        returnNote: loan.returnNote,
+        device: { id: loan.deviceId, callSign: loan.snapshotCallSign, status: 'AVAILABLE' },
       };
     } catch (error: unknown) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error('Failed to return loan:', error instanceof Error ? error.message : error);
-      throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      this.mapLoanError(error, 'return');
     }
+  }
+
+  /**
+   * Translate a radio-admin loan error into the HttpException the kiosk has
+   * always received. Faithful to the pre-cutover behaviour: a non-loanable
+   * device used to be absent from the loanable list (→ 404 device not found).
+   */
+  private mapLoanError(error: unknown, op: 'create' | 'return'): never {
+    if (error instanceof RadioAdminLoanError) {
+      switch (error.code) {
+        case 'device_not_found':
+        case 'device_not_loanable':
+          throw new HttpException(ERROR_MESSAGES.DEVICE_NOT_FOUND, HttpStatus.NOT_FOUND);
+        case 'device_not_available':
+        case 'device_already_on_loan':
+          throw new HttpException(ERROR_MESSAGES.DEVICE_NOT_AVAILABLE, HttpStatus.CONFLICT);
+        case 'loan_not_found':
+          throw new HttpException(ERROR_MESSAGES.LOAN_NOT_FOUND, HttpStatus.NOT_FOUND);
+        case 'loan_already_returned':
+          throw new HttpException(ERROR_MESSAGES.LOAN_ALREADY_RETURNED, HttpStatus.CONFLICT);
+        default:
+          this.logger.error(`Unexpected radio-admin ${op} error: ${error.code} (${error.status})`);
+          throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
+    // ServiceUnavailableException (radio-admin unreachable) and the explicit
+    // INTERNAL_SERVER_ERROR above are HttpExceptions — surface them unchanged.
+    if (error instanceof HttpException) throw error;
+    this.logger.error(`Failed to ${op} loan:`, error instanceof Error ? error.message : error);
+    throw new HttpException('Database operation failed', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
