@@ -23,7 +23,7 @@ function DeviceRowComponent({ device, onSelect, selectable, selected, className 
           ? ` · ${device.borrowedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`
           : ''
       }`
-    : sanitizeForDisplay(device.deviceType)
+    : sanitizeForDisplay(device.deviceType ?? '')
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === 'Enter' || e.key === ' ') && selectable) {

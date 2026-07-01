@@ -53,4 +53,30 @@ describe('DeviceRow', () => {
     const row = screen.getByRole('option')
     expect(row).toHaveAttribute('aria-selected', 'true')
   })
+
+  it('zeigt Ausleiher mit Uhrzeit, wenn borrowedAt gesetzt ist', () => {
+    render(
+      <DeviceRow
+        device={dev({ status: 'ON_LOAN', borrowerName: 'Meyer', borrowedAt: new Date('2026-07-01T14:30:00') })}
+        onSelect={vi.fn()}
+        selectable={false}
+      />,
+    )
+    expect(screen.getByText('Meyer · 14:30 Uhr')).toBeInTheDocument()
+  })
+
+  it('ruft onSelect bei Enter, wenn selectable', async () => {
+    const onSelect = vi.fn()
+    render(<DeviceRow device={dev()} onSelect={onSelect} selectable />)
+    screen.getByRole('button').focus()
+    await userEvent.keyboard('{Enter}')
+    expect(onSelect).toHaveBeenCalledWith('dev-1')
+  })
+
+  it('ruft onSelect nicht bei Enter, wenn nicht selectable', async () => {
+    const onSelect = vi.fn()
+    render(<DeviceRow device={dev({ status: 'ON_LOAN' })} onSelect={onSelect} selectable={false} />)
+    await userEvent.keyboard('{Enter}')
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 })
