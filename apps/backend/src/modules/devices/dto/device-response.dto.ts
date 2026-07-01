@@ -18,6 +18,9 @@ export class DeviceResponseDto {
   @ApiProperty({ description: 'Type of device', example: 'Handheld', nullable: true })
   deviceType!: string | null;
 
+  @ApiProperty({ description: 'Physical storage location (radio-admin, free text)', example: 'FüKW', nullable: true })
+  location!: string | null;
+
   // Composed: ON_LOAN when an active local loan exists, otherwise derived from
   // radio-admin's condition (DEFECT/MAINTENANCE) or AVAILABLE.
   @ApiProperty({

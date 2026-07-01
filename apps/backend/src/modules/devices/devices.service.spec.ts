@@ -57,8 +57,16 @@ describe('DevicesService', () => {
     const result = await service.findAll();
 
     expect(result).toEqual([
-      { id: 'id-1', callSign: 'Florian 4-21', serialNumber: 'SN-001', deviceType: 'Handheld', status: 'AVAILABLE' },
+      { id: 'id-1', callSign: 'Florian 4-21', serialNumber: 'SN-001', deviceType: 'Handheld', status: 'AVAILABLE', location: null },
     ]);
+  });
+
+  it('passes the radio-admin location through to the response', async () => {
+    radioAdmin.fetchLoanableDevices.mockResolvedValue([raDevice({ location: 'FüKW' })]);
+
+    const result = await service.findAll();
+
+    expect(result[0].location).toBe('FüKW');
   });
 
   it('overlays ON_LOAN for devices with an active loan from radio-admin', async () => {

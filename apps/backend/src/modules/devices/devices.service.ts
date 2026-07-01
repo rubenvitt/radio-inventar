@@ -32,6 +32,7 @@ export class DevicesService {
       callSign: device.rufname ?? device.issi,
       serialNumber: device.serialNumber,
       deviceType: device.deviceType,
+      location: device.location,
       status: mapRadioAdminStatus(device.status, activeDeviceIds.has(device.id)),
     }));
 
