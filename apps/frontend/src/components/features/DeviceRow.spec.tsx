@@ -54,6 +54,22 @@ describe('DeviceRow', () => {
     expect(row).toHaveAttribute('aria-selected', 'true')
   })
 
+  it('accessible name enthält den Status-Label (AVAILABLE)', () => {
+    render(<DeviceRow device={dev()} onSelect={vi.fn()} selectable />)
+    expect(screen.getByRole('button', { name: /Verfügbar/ })).toBeInTheDocument()
+  })
+
+  it('accessible name enthält den Ausleiher (ON_LOAN)', () => {
+    render(
+      <DeviceRow
+        device={dev({ status: 'ON_LOAN', borrowerName: 'Meyer' })}
+        onSelect={vi.fn()}
+        selectable={false}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /Meyer/ })).toBeInTheDocument()
+  })
+
   it('zeigt Ausleiher mit Uhrzeit, wenn borrowedAt gesetzt ist', () => {
     render(
       <DeviceRow

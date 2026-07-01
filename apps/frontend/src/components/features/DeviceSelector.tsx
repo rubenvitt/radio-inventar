@@ -24,7 +24,7 @@ export function DeviceSelector({ selectedDeviceIds, onSelect }: DeviceSelectorPr
   }
 
   return (
-    <div role="listbox" aria-label="Gerät auswählen">
+    <div>
       <DeviceFilterBar
         query={query}
         onQueryChange={setQuery}
@@ -33,22 +33,24 @@ export function DeviceSelector({ selectedDeviceIds, onSelect }: DeviceSelectorPr
         matchCount={matchCount}
         total={total}
       />
-      <DeviceGroupedList
-        groups={groups}
-        query={query}
-        total={total}
-        matchCount={matchCount}
-        onReset={reset}
-        renderRow={(device) => (
-          <DeviceRow
-            key={device.id}
-            device={device}
-            onSelect={onSelect}
-            selectable={device.status === DeviceStatusEnum.enum.AVAILABLE}
-            selected={selectedDeviceIds.includes(device.id)}
-          />
-        )}
-      />
+      <div role="listbox" aria-multiselectable="true" aria-label="Gerät auswählen">
+        <DeviceGroupedList
+          groups={groups}
+          query={query}
+          total={total}
+          matchCount={matchCount}
+          onReset={reset}
+          renderRow={(device) => (
+            <DeviceRow
+              key={device.id}
+              device={device}
+              onSelect={onSelect}
+              selectable={device.status === DeviceStatusEnum.enum.AVAILABLE}
+              selected={selectedDeviceIds.includes(device.id)}
+            />
+          )}
+        />
+      </div>
     </div>
   )
 }

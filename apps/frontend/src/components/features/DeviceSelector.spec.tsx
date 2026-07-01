@@ -303,6 +303,19 @@ describe('DeviceSelector', () => {
     expect(listbox).toBeInTheDocument()
   })
 
+  it('hat aria-multiselectable="true" für Accessibility', () => {
+    mockUseDevices.mockReturnValue(createMockReturn({
+      data: mockDevices,
+      isSuccess: true,
+      status: 'success',
+    }))
+
+    render(<DeviceSelector {...defaultProps} />)
+
+    const listbox = screen.getByRole('listbox')
+    expect(listbox).toHaveAttribute('aria-multiselectable', 'true')
+  })
+
   // Additional edge case tests
   describe('Edge Cases', () => {
     it('handles single device correctly', () => {

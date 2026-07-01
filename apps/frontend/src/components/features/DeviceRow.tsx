@@ -32,12 +32,20 @@ function DeviceRowComponent({ device, onSelect, selectable, selected, className 
     }
   }
 
+  const statusLabel = statusMeta?.label ?? ''
+  const ariaLabel = [
+    sanitizeForDisplay(device.callSign),
+    device.location ? sanitizeForDisplay(device.location) : null,
+    statusLabel || null,
+    secondary || null,
+  ].filter(Boolean).join(', ')
+
   return (
     <div
       role={isSelectionMode ? 'option' : 'button'}
       aria-selected={isSelectionMode ? selected : undefined}
       aria-disabled={!selectable}
-      aria-label={`${sanitizeForDisplay(device.callSign)}${device.location ? `, ${sanitizeForDisplay(device.location)}` : ''}`}
+      aria-label={ariaLabel}
       tabIndex={selectable ? 0 : -1}
       onClick={selectable ? () => onSelect(device.id) : undefined}
       onKeyDown={handleKeyDown}

@@ -22,4 +22,9 @@ describe('DeviceGroup', () => {
     expect(screen.getByText('inhalt')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /FüKW/ })).toHaveAttribute('aria-expanded', 'true')
   })
+
+  it('ist als role="group" mit dem Label als accessible name ausgezeichnet', () => {
+    render(<DeviceGroup label="FüKW" count={8}><div>inhalt</div></DeviceGroup>)
+    expect(screen.getByRole('group', { name: 'FüKW' })).toBeInTheDocument()
+  })
 })

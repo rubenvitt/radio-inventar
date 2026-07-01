@@ -15,7 +15,7 @@ export function DeviceGroup({ label, count, defaultOpen = true, forceOpen = fals
   const isOpen = forceOpen || open
 
   return (
-    <section className="flex flex-col gap-2">
+    <section role="group" aria-label={label} className="flex flex-col gap-2">
       <button
         type="button"
         aria-expanded={isOpen}
