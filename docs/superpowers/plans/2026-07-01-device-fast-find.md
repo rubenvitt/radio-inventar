@@ -700,7 +700,7 @@ export function DeviceFilterBar({
             type="button"
             onClick={() => onQueryChange('')}
             aria-label="Suche zurücksetzen"
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-5 w-5" />
           </button>
@@ -863,7 +863,7 @@ function DeviceRowComponent({ device, onSelect, selectable, selected, className 
           ? ` · ${device.borrowedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`
           : ''
       }`
-    : sanitizeForDisplay(device.deviceType)
+    : sanitizeForDisplay(device.deviceType ?? '')
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === 'Enter' || e.key === ' ') && selectable) {
@@ -1520,10 +1520,10 @@ function ReturnPage() {
             placeholder="Rufname oder Name…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-10 pr-10"
+            className="pl-10 pr-10 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
-            <button type="button" onClick={() => setQuery('')} aria-label="Suche zurücksetzen" className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setQuery('')} aria-label="Suche zurücksetzen" className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground">
               <X className="h-5 w-5" />
             </button>
           )}
