@@ -47,6 +47,7 @@ function createMockDevice(overrides: {
   id: string;
   callSign: string;
   status: DeviceStatus;
+  location?: string | null;
 }) {
   return {
     id: overrides.id,
@@ -54,6 +55,7 @@ function createMockDevice(overrides: {
     status: overrides.status,
     serialNumber: 'SN001',
     deviceType: 'Handheld',
+    location: overrides.location ?? null,
     notes: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -102,6 +104,29 @@ describe('useDevices', () => {
     expect(loanedDevice?.id).toBe(TEST_IDS.device2);
     expect(loanedDevice?.borrowerName).toBe('Max Mustermann');
     expect(loanedDevice?.borrowedAt).toEqual(new Date('2025-12-16T10:00:00Z'));
+  });
+
+  it('behält location aus der API bei', async () => {
+    const mockDevices = [
+      createMockDevice({
+        id: TEST_IDS.device1,
+        callSign: 'F4-21',
+        status: 'AVAILABLE',
+        location: 'FüKW',
+      }),
+    ];
+
+    mockApiClient.get
+      .mockResolvedValueOnce({ data: mockDevices })
+      .mockResolvedValueOnce({ data: [] });
+
+    const { result } = renderHook(() => useDevices(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[0]?.location).toBe('FüKW');
   });
 
   it('sorts devices by status priority (AVAILABLE first)', async () => {

@@ -15,6 +15,7 @@ const DeviceApiSchema = z.object({
   callSign: z.string(),
   serialNumber: z.string().nullable(),
   deviceType: z.string().nullable(),
+  location: z.string().nullable(),
   status: DeviceStatusEnum,
 });
 
