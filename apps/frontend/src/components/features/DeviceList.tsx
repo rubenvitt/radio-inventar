@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from '@tanstack/react-router';
 import { useDevices } from '@/api/devices';
-import { DeviceCard } from './DeviceCard';
+import { useDeviceFilter } from '@/hooks/useDeviceFilter';
+import { DeviceFilterBar } from './DeviceFilterBar';
+import { DeviceGroupedList } from './DeviceGroupedList';
+import { DeviceRow } from './DeviceRow';
 import { LoadingState } from './LoadingState';
 import { ErrorState } from './ErrorState';
 import { TouchButton } from '@/components/ui/touch-button';
@@ -18,6 +21,7 @@ const ERROR_AUTO_DISMISS_MS = 5000;
 export function DeviceList() {
   const navigate = useNavigate();
   const { data: devices, isLoading, isFetching, isError, error, refetch } = useDevices();
+  const { query, setQuery, status, setStatus, groups, total, matchCount, reset } = useDeviceFilter(devices ?? []);
   const [refreshError, setRefreshError] = useState<Error | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,18 +163,30 @@ export function DeviceList() {
           </TouchButton>
         </div>
       )}
-      {/* Screen Reader Announcement */}
-      <div role="status" className="sr-only">
-        {!isFetching && devices && `${devices.length} Geräte geladen`}
-      </div>
-      <div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4"
-        data-testid="device-list"
-      >
-        {devices.map(device => (
-          <DeviceCard key={device.id} device={device} onSelect={handleDeviceSelect} />
-        ))}
-      </div>
+      <DeviceFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        status={status}
+        onStatusChange={setStatus}
+        matchCount={matchCount}
+        total={total}
+      />
+
+      <DeviceGroupedList
+        groups={groups}
+        query={query}
+        total={total}
+        matchCount={matchCount}
+        onReset={reset}
+        renderRow={(device) => (
+          <DeviceRow
+            key={device.id}
+            device={device}
+            onSelect={handleDeviceSelect}
+            selectable={device.status === 'AVAILABLE'}
+          />
+        )}
+      />
     </>
   );
 }

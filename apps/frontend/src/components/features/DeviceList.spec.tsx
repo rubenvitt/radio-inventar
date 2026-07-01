@@ -67,9 +67,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'AVAILABLE',
     serialNumber: 'SN1',
     deviceType: 'Handheld',
-    notes: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: null,
   },
   {
     id: 'dev2',
@@ -77,9 +75,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'ON_LOAN',
     serialNumber: 'SN2',
     deviceType: 'Handheld',
-    notes: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: null,
     borrowerName: 'Max',
   },
 ];
@@ -126,31 +122,7 @@ describe('DeviceList', () => {
     expect(screen.getByRole('button', { name: /erneut versuchen/i })).toBeInTheDocument();
   });
 
-  it('renders devices in grid when data available', () => {
-    mockUseDevices.mockReturnValue(createMockReturn({
-      data: mockDevices,
-      isSuccess: true,
-      status: 'success',
-    }));
-
-    const { container } = render(<DeviceList />);
-    const grid = container.querySelector('.grid');
-    expect(grid).toBeInTheDocument();
-  });
-
-  it('grid has correct responsive classes', () => {
-    mockUseDevices.mockReturnValue(createMockReturn({
-      data: mockDevices,
-      isSuccess: true,
-      status: 'success',
-    }));
-
-    const { container } = render(<DeviceList />);
-    const grid = container.querySelector('.grid');
-    expect(grid).toHaveClass('grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3');
-  });
-
-  it('renders correct number of DeviceCards', () => {
+  it('renders correct number of devices', () => {
     mockUseDevices.mockReturnValue(createMockReturn({
       data: mockDevices,
       isSuccess: true,
@@ -197,9 +169,7 @@ describe('DeviceList', () => {
         status: 'DEFECT',
         serialNumber: 'SN3',
         deviceType: 'Handheld',
-        notes: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        location: null,
       },
     ];
     mockUseDevices.mockReturnValue(createMockReturn({
@@ -442,7 +412,7 @@ describe('DeviceList', () => {
 
   // ACCESSIBILITY & SEMANTIC TESTS
   describe('Accessibility & Semantics', () => {
-    it('has aria-live region for accessibility', () => {
+    it('has aria-live region showing match count (from DeviceFilterBar)', () => {
       mockUseDevices.mockReturnValue(createMockReturn({
         data: mockDevices,
         isSuccess: true,
@@ -453,7 +423,7 @@ describe('DeviceList', () => {
       // role="status" provides implicit aria-live="polite" per WAI-ARIA spec
       const liveRegion = container.querySelector('[role="status"]');
       expect(liveRegion).toBeInTheDocument();
-      expect(liveRegion).toHaveClass('sr-only');
+      expect(liveRegion).toHaveTextContent(`${mockDevices.length} Geräte`);
     });
 
     it('has semantic header element', () => {
@@ -469,16 +439,6 @@ describe('DeviceList', () => {
       expect(header).toHaveTextContent('Geräte');
     });
 
-    it('has data-testid for E2E testing', () => {
-      mockUseDevices.mockReturnValue(createMockReturn({
-        data: mockDevices,
-        isSuccess: true,
-        status: 'success',
-      }));
-
-      render(<DeviceList />);
-      expect(screen.getByTestId('device-list')).toBeInTheDocument();
-    });
   });
 
   // SECURITY: getUserFriendlyErrorMessage TESTS
@@ -639,9 +599,7 @@ describe('DeviceList', () => {
           status: 'AVAILABLE',
           serialNumber: 'SN1',
           deviceType: 'Handheld',
-          notes: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          location: null,
         },
       ];
 
@@ -663,9 +621,7 @@ describe('DeviceList', () => {
           status: 'ON_LOAN',
           serialNumber: 'SN1',
           deviceType: 'Handheld',
-          notes: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          location: null,
           borrowerName: 'Max Mustermann',
         },
         {
@@ -674,9 +630,7 @@ describe('DeviceList', () => {
           status: 'AVAILABLE',
           serialNumber: 'SN2',
           deviceType: 'Handheld',
-          notes: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          location: null,
         },
       ];
 
@@ -779,5 +733,32 @@ describe('DeviceList', () => {
       clearTimeoutSpy.mockRestore();
       vi.useRealTimers();
     }, 10000);
+  });
+
+  // FILTERING & NAVIGATION (Task 8: filter bar + grouped compact rows)
+  describe('Filtering & Navigation', () => {
+    it('filtert die Liste per Suche', async () => {
+      mockUseDevices.mockReturnValue(createMockReturn({
+        data: [
+          { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', callSign: 'Florian 4-21', serialNumber: null, deviceType: 'Handheld', location: 'FüKW', status: 'AVAILABLE' },
+          { id: 'bbbbbbbbbbbbbbbbbbbbbbbb', callSign: 'Rotkreuz 1', serialNumber: null, deviceType: 'Handheld', location: 'Lager', status: 'AVAILABLE' },
+        ],
+        isSuccess: true, isFetched: true,
+      }));
+      render(<DeviceList />);
+      await userEvent.type(screen.getByRole('searchbox'), 'rotkreuz');
+      expect(screen.getByText('Rotkreuz 1')).toBeInTheDocument();
+      expect(screen.queryByText('Florian 4-21')).not.toBeInTheDocument();
+    });
+
+    it('navigiert beim Klick auf ein verfügbares Gerät zur Ausleihe', async () => {
+      mockUseDevices.mockReturnValue(createMockReturn({
+        data: [{ id: 'aaaaaaaaaaaaaaaaaaaaaaaa', callSign: 'Florian 4-21', serialNumber: null, deviceType: 'Handheld', location: 'FüKW', status: 'AVAILABLE' }],
+        isSuccess: true, isFetched: true,
+      }));
+      render(<DeviceList />);
+      await userEvent.click(screen.getByText('Florian 4-21'));
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/loan', search: { deviceIds: ['aaaaaaaaaaaaaaaaaaaaaaaa'] } });
+    });
   });
 });
