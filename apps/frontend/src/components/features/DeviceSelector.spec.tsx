@@ -46,20 +46,6 @@ function createMockReturn(overrides: Partial<UseDevicesResult>): UseDevicesResul
   } as UseDevicesResult
 }
 
-// Helper to create mock devices
-function createMockDevice(id: string): DeviceWithLoanInfo {
-  return {
-    id: `dev${id}`,
-    callSign: `FuG-${id}`,
-    status: 'AVAILABLE',
-    serialNumber: `SN${id}`,
-    deviceType: 'Handheld',
-    notes: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }
-}
-
 const mockDevices: DeviceWithLoanInfo[] = [
   {
     id: 'dev1',
@@ -67,9 +53,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'AVAILABLE',
     serialNumber: 'SN1',
     deviceType: 'Handheld',
-    notes: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: 'FüKW',
   },
   {
     id: 'dev2',
@@ -77,9 +61,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'ON_LOAN',
     serialNumber: 'SN2',
     deviceType: 'Handheld',
-    notes: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: 'FüKW',
     borrowerName: 'Max Mustermann',
   },
   {
@@ -88,9 +70,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'DEFECT',
     serialNumber: 'SN3',
     deviceType: 'Handheld',
-    notes: 'Defektes Display',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: 'FüKW',
   },
   {
     id: 'dev4',
@@ -98,9 +78,7 @@ const mockDevices: DeviceWithLoanInfo[] = [
     status: 'MAINTENANCE',
     serialNumber: 'SN4',
     deviceType: 'Handheld',
-    notes: 'In Wartung',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    location: 'FüKW',
   },
 ]
 
@@ -150,18 +128,14 @@ describe('DeviceSelector', () => {
     expect(screen.getByRole('button', { name: /erneut versuchen/i })).toBeInTheDocument()
   })
 
-  it('zeigt alle Geräte im Grid', () => {
+  it('zeigt alle Geräte in der Liste', () => {
     mockUseDevices.mockReturnValue(createMockReturn({
       data: mockDevices,
       isSuccess: true,
       status: 'success',
     }))
 
-    const { container } = render(<DeviceSelector {...defaultProps} />)
-
-    const grid = container.querySelector('.grid')
-    expect(grid).toBeInTheDocument()
-    expect(grid).toHaveClass('grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3')
+    render(<DeviceSelector {...defaultProps} />)
 
     // Check all devices are rendered
     expect(screen.getByText('Florian 4-21')).toBeInTheDocument()
@@ -179,11 +153,8 @@ describe('DeviceSelector', () => {
 
     render(<DeviceSelector {...defaultProps} />)
 
-    // Find the AVAILABLE device card (Florian 4-21)
-    const availableCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
+    const availableCard = screen.getByRole('option', { name: /Florian 4-21/i })
     expect(availableCard).toBeInTheDocument()
-    expect(availableCard).not.toHaveClass('opacity-50', 'cursor-not-allowed')
-    expect(availableCard).toHaveClass('cursor-pointer')
     expect(availableCard).toHaveAttribute('tabIndex', '0')
     expect(availableCard).toHaveAttribute('aria-disabled', 'false')
   })
@@ -197,11 +168,8 @@ describe('DeviceSelector', () => {
 
     render(<DeviceSelector {...defaultProps} />)
 
-    // Find the ON_LOAN device card (Florian 4-22)
-    const onLoanCard = screen.getByRole('option', { name: /Florian 4-22 - Ausgeliehen/i })
+    const onLoanCard = screen.getByRole('option', { name: /Florian 4-22/i })
     expect(onLoanCard).toBeInTheDocument()
-    expect(onLoanCard).toHaveClass('opacity-50', 'cursor-not-allowed')
-    expect(onLoanCard).not.toHaveClass('cursor-pointer')
     expect(onLoanCard).toHaveAttribute('tabIndex', '-1')
     expect(onLoanCard).toHaveAttribute('aria-disabled', 'true')
   })
@@ -215,11 +183,8 @@ describe('DeviceSelector', () => {
 
     render(<DeviceSelector {...defaultProps} />)
 
-    // Find the DEFECT device card (Florian 4-23)
-    const defectCard = screen.getByRole('option', { name: /Florian 4-23 - Defekt/i })
+    const defectCard = screen.getByRole('option', { name: /Florian 4-23/i })
     expect(defectCard).toBeInTheDocument()
-    expect(defectCard).toHaveClass('opacity-50', 'cursor-not-allowed')
-    expect(defectCard).not.toHaveClass('cursor-pointer')
     expect(defectCard).toHaveAttribute('tabIndex', '-1')
     expect(defectCard).toHaveAttribute('aria-disabled', 'true')
   })
@@ -233,11 +198,8 @@ describe('DeviceSelector', () => {
 
     render(<DeviceSelector {...defaultProps} />)
 
-    // Find the MAINTENANCE device card (Florian 4-24)
-    const maintenanceCard = screen.getByRole('option', { name: /Florian 4-24 - Wartung/i })
+    const maintenanceCard = screen.getByRole('option', { name: /Florian 4-24/i })
     expect(maintenanceCard).toBeInTheDocument()
-    expect(maintenanceCard).toHaveClass('opacity-50', 'cursor-not-allowed')
-    expect(maintenanceCard).not.toHaveClass('cursor-pointer')
     expect(maintenanceCard).toHaveAttribute('tabIndex', '-1')
     expect(maintenanceCard).toHaveAttribute('aria-disabled', 'true')
   })
@@ -255,7 +217,7 @@ describe('DeviceSelector', () => {
     )
 
     // Click on AVAILABLE device (Florian 4-21)
-    const availableCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
+    const availableCard = screen.getByRole('option', { name: /Florian 4-21/i })
     expect(availableCard).toBeInTheDocument()
 
     await userEvent.click(availableCard)
@@ -277,7 +239,7 @@ describe('DeviceSelector', () => {
     )
 
     // Try clicking on ON_LOAN device (Florian 4-22)
-    const onLoanCard = screen.getByRole('option', { name: /Florian 4-22 - Ausgeliehen/i })
+    const onLoanCard = screen.getByRole('option', { name: /Florian 4-22/i })
     expect(onLoanCard).toBeInTheDocument()
 
     await userEvent.click(onLoanCard)
@@ -298,9 +260,8 @@ describe('DeviceSelector', () => {
     )
 
     // Find the selected device card
-    const selectedCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
+    const selectedCard = screen.getByRole('option', { name: /Florian 4-21/i })
     expect(selectedCard).toBeInTheDocument()
-    expect(selectedCard).toHaveClass('ring-2', 'ring-primary')
     expect(selectedCard).toHaveAttribute('aria-selected', 'true')
   })
 
@@ -370,15 +331,13 @@ describe('DeviceSelector', () => {
       )
 
       // Initially no selection
-      let selectedCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
-      expect(selectedCard).not.toHaveClass('ring-2', 'ring-primary')
+      let selectedCard = screen.getByRole('option', { name: /Florian 4-21/i })
       expect(selectedCard).toHaveAttribute('aria-selected', 'false')
 
       // Update selection
       rerender(<DeviceSelector selectedDeviceIds={['dev1']} onSelect={vi.fn()} />)
 
-      selectedCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
-      expect(selectedCard).toHaveClass('ring-2', 'ring-primary')
+      selectedCard = screen.getByRole('option', { name: /Florian 4-21/i })
       expect(selectedCard).toHaveAttribute('aria-selected', 'true')
     })
 
@@ -392,21 +351,21 @@ describe('DeviceSelector', () => {
       render(<DeviceSelector {...defaultProps} />)
 
       // Only dev1 (AVAILABLE) should be selectable
-      const availableCard = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
-      expect(availableCard).toHaveClass('cursor-pointer')
+      const availableCard = screen.getByRole('option', { name: /Florian 4-21/i })
       expect(availableCard).toHaveAttribute('aria-disabled', 'false')
+      expect(availableCard).toHaveAttribute('tabIndex', '0')
 
       // All others should be disabled
-      const onLoanCard = screen.getByRole('option', { name: /Florian 4-22 - Ausgeliehen/i })
-      const defectCard = screen.getByRole('option', { name: /Florian 4-23 - Defekt/i })
-      const maintenanceCard = screen.getByRole('option', { name: /Florian 4-24 - Wartung/i })
+      const onLoanCard = screen.getByRole('option', { name: /Florian 4-22/i })
+      const defectCard = screen.getByRole('option', { name: /Florian 4-23/i })
+      const maintenanceCard = screen.getByRole('option', { name: /Florian 4-24/i })
 
-      expect(onLoanCard).toHaveClass('cursor-not-allowed')
       expect(onLoanCard).toHaveAttribute('aria-disabled', 'true')
-      expect(defectCard).toHaveClass('cursor-not-allowed')
+      expect(onLoanCard).toHaveAttribute('tabIndex', '-1')
       expect(defectCard).toHaveAttribute('aria-disabled', 'true')
-      expect(maintenanceCard).toHaveClass('cursor-not-allowed')
+      expect(defectCard).toHaveAttribute('tabIndex', '-1')
       expect(maintenanceCard).toHaveAttribute('aria-disabled', 'true')
+      expect(maintenanceCard).toHaveAttribute('tabIndex', '-1')
     })
 
     it('passes correct isSelected prop to each card', () => {
@@ -421,55 +380,39 @@ describe('DeviceSelector', () => {
       )
 
       // Only dev1 should be selected
-      const dev1Card = screen.getByRole('option', { name: /Florian 4-21 - Verfügbar/i })
-      const dev2Card = screen.getByRole('option', { name: /Florian 4-22 - Ausgeliehen/i })
+      const dev1Card = screen.getByRole('option', { name: /Florian 4-21/i })
+      const dev2Card = screen.getByRole('option', { name: /Florian 4-22/i })
 
-      expect(dev1Card).toHaveClass('ring-2', 'ring-primary')
       expect(dev1Card).toHaveAttribute('aria-selected', 'true')
-      expect(dev2Card).not.toHaveClass('ring-2', 'ring-primary')
       expect(dev2Card).toHaveAttribute('aria-selected', 'false')
     })
   })
 
-  describe('Keyboard Navigation', () => {
-    it('erlaubt Tab-Navigation zu wählbaren Geräten', async () => {
-      const user = userEvent.setup()
+  // FILTERING (Task 9: filter bar + grouped selectable rows)
+  describe('Filtering', () => {
+    it('filtert die auswählbaren Geräte per Suche', async () => {
       mockUseDevices.mockReturnValue(createMockReturn({
         data: [
-          { ...createMockDevice('1'), status: 'AVAILABLE' },
-          { ...createMockDevice('2'), status: 'ON_LOAN' },
-          { ...createMockDevice('3'), status: 'AVAILABLE' },
+          { id: 'aaaaaaaaaaaaaaaaaaaaaaaa', callSign: 'Florian 4-21', serialNumber: null, deviceType: 'Handheld', location: 'FüKW', status: 'AVAILABLE' },
+          { id: 'bbbbbbbbbbbbbbbbbbbbbbbb', callSign: 'Rotkreuz 1', serialNumber: null, deviceType: 'Handheld', location: 'Lager', status: 'AVAILABLE' },
         ],
         isSuccess: true,
-        status: 'success',
       }))
-
       render(<DeviceSelector selectedDeviceIds={[]} onSelect={vi.fn()} />)
-
-      // Tab zum ersten wählbaren Gerät
-      await user.tab()
-      expect(document.activeElement).toHaveAttribute('aria-label', expect.stringContaining('FuG-1'))
+      await userEvent.type(screen.getByRole('searchbox'), 'florian')
+      expect(screen.getByText('Florian 4-21')).toBeInTheDocument()
+      expect(screen.queryByText('Rotkreuz 1')).not.toBeInTheDocument()
     })
 
-    it('überspringt disabled Geräte bei Tab-Navigation', async () => {
-      const user = userEvent.setup()
+    it('ruft onSelect beim Klick auf ein verfügbares Gerät', async () => {
+      const onSelect = vi.fn()
       mockUseDevices.mockReturnValue(createMockReturn({
-        data: [
-          { ...createMockDevice('1'), status: 'AVAILABLE' },
-          { ...createMockDevice('2'), status: 'ON_LOAN' },
-          { ...createMockDevice('3'), status: 'AVAILABLE' },
-        ],
+        data: [{ id: 'aaaaaaaaaaaaaaaaaaaaaaaa', callSign: 'Florian 4-21', serialNumber: null, deviceType: 'Handheld', location: 'FüKW', status: 'AVAILABLE' }],
         isSuccess: true,
-        status: 'success',
       }))
-
-      render(<DeviceSelector selectedDeviceIds={[]} onSelect={vi.fn()} />)
-
-      await user.tab() // Erstes AVAILABLE
-      await user.tab() // Sollte ON_LOAN überspringen, drittes AVAILABLE
-
-      // Zweites Tab sollte beim dritten Gerät landen (skip disabled)
-      expect(document.activeElement).toHaveAttribute('tabindex', '0')
+      render(<DeviceSelector selectedDeviceIds={[]} onSelect={onSelect} />)
+      await userEvent.click(screen.getByRole('option'))
+      expect(onSelect).toHaveBeenCalledWith('aaaaaaaaaaaaaaaaaaaaaaaa')
     })
   })
 })

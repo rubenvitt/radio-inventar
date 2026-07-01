@@ -1,7 +1,10 @@
 import { useDevices } from '@/api/devices'
+import { useDeviceFilter } from '@/hooks/useDeviceFilter'
 import { LoadingState } from '@/components/features/LoadingState'
 import { ErrorState } from '@/components/features/ErrorState'
-import { SelectableDeviceCard } from './SelectableDeviceCard'
+import { DeviceFilterBar } from './DeviceFilterBar'
+import { DeviceGroupedList } from './DeviceGroupedList'
+import { DeviceRow } from './DeviceRow'
 import { DeviceStatusEnum } from '@radio-inventar/shared'
 
 interface DeviceSelectorProps {
@@ -11,42 +14,41 @@ interface DeviceSelectorProps {
 
 export function DeviceSelector({ selectedDeviceIds, onSelect }: DeviceSelectorProps) {
   const { data: devices, isLoading, error, refetch } = useDevices()
+  const { query, setQuery, status, setStatus, groups, total, matchCount, reset } = useDeviceFilter(devices ?? [])
 
   if (isLoading) return <LoadingState />
   if (error) return <ErrorState error={error} onRetry={refetch} />
 
-  if (!devices) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        Gerätedaten nicht verfügbar
-      </p>
-    )
-  }
-
-  if (devices.length === 0) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        Keine Geräte vorhanden
-      </p>
-    )
+  if (!devices || devices.length === 0) {
+    return <p className="text-center text-muted-foreground py-8">Keine Geräte vorhanden</p>
   }
 
   return (
-    <div
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      role="listbox"
-      aria-label="Gerät auswählen"
-    >
-      {devices.map(device => (
-        <SelectableDeviceCard
-          key={device.id}
-          device={device}
-          deviceId={device.id}
-          isSelected={selectedDeviceIds.includes(device.id)}
-          isSelectable={device.status === DeviceStatusEnum.enum.AVAILABLE}
-          onSelect={onSelect}
-        />
-      ))}
+    <div role="listbox" aria-label="Gerät auswählen">
+      <DeviceFilterBar
+        query={query}
+        onQueryChange={setQuery}
+        status={status}
+        onStatusChange={setStatus}
+        matchCount={matchCount}
+        total={total}
+      />
+      <DeviceGroupedList
+        groups={groups}
+        query={query}
+        total={total}
+        matchCount={matchCount}
+        onReset={reset}
+        renderRow={(device) => (
+          <DeviceRow
+            key={device.id}
+            device={device}
+            onSelect={onSelect}
+            selectable={device.status === DeviceStatusEnum.enum.AVAILABLE}
+            selected={selectedDeviceIds.includes(device.id)}
+          />
+        )}
+      />
     </div>
   )
 }
