@@ -49,14 +49,14 @@ export function DeviceFilterBar({
           placeholder="Rufname oder Standort…"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          className="pl-10 pr-10"
+          className="pl-10 pr-10 [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
           <button
             type="button"
             onClick={() => onQueryChange('')}
             aria-label="Suche zurücksetzen"
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-5 w-5" />
           </button>

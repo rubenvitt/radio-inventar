@@ -30,6 +30,11 @@ describe('DeviceFilterBar', () => {
     expect(props.onQueryChange).toHaveBeenCalledWith('')
   })
 
+  it('zeigt keinen Clear-Button bei leerer Query', () => {
+    setup({ query: '' })
+    expect(screen.queryByRole('button', { name: /suche zurücksetzen/i })).not.toBeInTheDocument()
+  })
+
   it('wechselt Status per Chip', async () => {
     const props = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Frei' }))
@@ -44,5 +49,10 @@ describe('DeviceFilterBar', () => {
   it('zeigt den Trefferzähler', () => {
     setup({ matchCount: 5, total: 21 })
     expect(screen.getByText(/5 von 21 Geräten/i)).toBeInTheDocument()
+  })
+
+  it('zeigt nur die Gesamtzahl, wenn alle Geräte passen (matchCount === total)', () => {
+    setup({ matchCount: 21, total: 21 })
+    expect(screen.getByText('21 Geräte')).toBeInTheDocument()
   })
 })
